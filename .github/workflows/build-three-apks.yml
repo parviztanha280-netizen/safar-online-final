@@ -1,4 +1,4 @@
-name: Build 3 Safar Online APKs - Firebase Fixed
+name: Build Safar Online - 3 APKs
 
 on:
   workflow_dispatch:
@@ -11,590 +11,13 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create role apps
-        shell: bash
-        run: |
-          set -e
-
-          rm -rf build-source dist
-          mkdir -p build-source/passenger/www
-          mkdir -p build-source/driver/www
-          mkdir -p build-source/admin/www
-          mkdir -p dist
-
-          cat > build-source/passenger/www/index.html <<'HTML'
-<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سفر آنلاین - مسافر</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-.box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
-input{border:1px solid #ddd}
-button{background:#16834b;color:#fff;border:0;font-weight:bold}
-.status{padding:14px;background:#eef7f1;border-radius:10px;margin-top:12px;white-space:pre-wrap}
-</style>
-</head>
-<body>
-<div class="box">
-<h1>👤 سفر آنلاین</h1>
-<h3>پنل مسافر</h3>
-
-<input id="name" placeholder="نام مسافر">
-<input id="phone" placeholder="شماره موبایل">
-<input id="from" placeholder="مبدأ">
-<input id="to" placeholder="مقصد">
-<input id="fare" type="number" placeholder="کرایه پیشنهادی">
-
-<button id="request">🚕 درخواست سفر</button>
-
-<div id="status" class="status">
-در حال آماده‌سازی اتصال...
-</div>
-</div>
-
-<script type="module">
-import {initializeApp}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-
-import {
-getFirestore,
-collection,
-addDoc,
-serverTimestamp,
-doc,
-onSnapshot
-}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-
-const firebaseConfig={
-apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-authDomain:"safaronline.firebaseapp.com",
-projectId:"safaronline",
-storageBucket:"safaronline.firebasestorage.app",
-messagingSenderId:"945083323788",
-appId:"1:945083323788:android:ee98efa3e671bd549cf2a9"
-};
-
-const statusEl=document.getElementById("status");
-const button=document.getElementById("request");
-
-let db;
-let ready=false;
-
-try{
-const app=initializeApp(firebaseConfig);
-db=getFirestore(app);
-ready=true;
-
-statusEl.textContent=
-"✅ اتصال آماده است. اطلاعات سفر را وارد کنید.";
-
-}catch(e){
-
-statusEl.textContent=
-"❌ خطای اتصال Firebase:\n"+
-(e?.message||e);
-
-}
-
-button.addEventListener("click",async()=>{
-
-if(!ready){
-statusEl.textContent="❌ Firebase آماده نیست.";
-return;
-}
-
-const name=
-document.getElementById("name").value.trim();
-
-const phone=
-document.getElementById("phone").value.trim();
-
-const from=
-document.getElementById("from").value.trim();
-
-const to=
-document.getElementById("to").value.trim();
-
-const fare=
-Number(document.getElementById("fare").value||0);
-
-if(!from||!to){
-
-statusEl.textContent=
-"⚠️ مبدأ و مقصد را وارد کنید.";
-
-return;
-}
-
-button.disabled=true;
-
-statusEl.textContent=
-"⏳ در حال ثبت درخواست...";
-
-try{
-
-const ref=await addDoc(
-collection(db,"rides"),
-{
-name,
-phone,
-from,
-to,
-fare,
-status:"requested",
-createdAt:serverTimestamp()
-}
-);
-
-statusEl.textContent=
-"✅ درخواست ثبت شد.\n"+
-"شناسه سفر: "+ref.id+
-"\nمنتظر پذیرش راننده هستید.";
-
-onSnapshot(
-doc(db,"rides",ref.id),
-snap=>{
-
-if(!snap.exists())return;
-
-const r=snap.data();
-
-statusEl.textContent=
-"وضعیت سفر: "+
-(r.status||"نامشخص")+
-(r.driverName
-?"\nراننده: "+r.driverName:"")+
-(r.plate
-?"\nپلاک: "+r.plate:"");
-
-}
-);
-
-}catch(e){
-
-button.disabled=false;
-
-statusEl.textContent=
-"❌ ثبت سفر انجام نشد:\n"+
-(e?.message||e);
-
-}
-
-});
-</script>
-</body>
-</html>
-HTML
-
-          cat > build-source/driver/www/index.html <<'HTML'
-<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سفر آنلاین - راننده</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-.box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
-input{border:1px solid #ddd}
-button{background:#1769aa;color:#fff;border:0;font-weight:bold}
-.ride{background:#f1f5f9;padding:15px;border-radius:12px;margin:12px 0}
-.status{padding:14px;background:#eef4fa;border-radius:10px;white-space:pre-wrap}
-</style>
-</head>
-<body>
-
-<div class="box">
-
-<h1>🚗 سفر آنلاین</h1>
-<h3>پنل راننده</h3>
-
-<input id="driver" placeholder="نام راننده">
-<input id="plate" placeholder="شماره پلاک">
-
-<button id="online">
-🟢 آنلاین شدن
-</button>
-
-<div id="status" class="status">
-آماده‌سازی...
-</div>
-
-<div id="list"></div>
-
-</div>
-
-<script type="module">
-
-import {initializeApp}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-
-import {
-getFirestore,
-collection,
-query,
-where,
-onSnapshot,
-doc,
-updateDoc
-}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-
-const firebaseConfig={
-apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-authDomain:"safaronline.firebaseapp.com",
-projectId:"safaronline",
-storageBucket:"safaronline.firebasestorage.app",
-messagingSenderId:"945083323788",
-appId:"1:945083323788:android:b2377a46b317584a9cf2a9"
-};
-
-const statusEl=
-document.getElementById("status");
-
-const button=
-document.getElementById("online");
-
-let db;
-let ready=false;
-
-try{
-
-db=getFirestore(
-initializeApp(firebaseConfig)
-);
-
-ready=true;
-
-statusEl.textContent=
-"✅ اتصال آماده است. برای دریافت سفر آنلاین شوید.";
-
-}catch(e){
-
-statusEl.textContent=
-"❌ خطای اتصال Firebase:\n"+
-(e?.message||e);
-
-}
-
-button.addEventListener("click",()=>{
-
-if(!ready){
-
-statusEl.textContent=
-"❌ Firebase آماده نیست.";
-
-return;
-}
-
-button.disabled=true;
-
-button.textContent=
-"🟢 راننده آنلاین است";
-
-statusEl.textContent=
-"در حال دریافت درخواست‌های جدید...";
-
-const q=query(
-collection(db,"rides"),
-where("status","==","requested")
-);
-
-onSnapshot(q,snapshot=>{
-
-const list=
-document.getElementById("list");
-
-list.innerHTML="";
-
-if(snapshot.empty){
-
-statusEl.textContent=
-"🟢 آنلاین هستید.\nدرخواست جدیدی وجود ندارد.";
-
-return;
-}
-
-statusEl.textContent=
-"🟢 آنلاین هستید.\nدرخواست‌های جدید:";
-
-snapshot.forEach(item=>{
-
-const r=item.data();
-
-const box=
-document.createElement("div");
-
-box.className="ride";
-
-box.innerHTML=
-"<b>مبدأ:</b> "+(r.from||"-")+
-"<br><b>مقصد:</b> "+(r.to||"-")+
-"<br><b>کرایه:</b> "+(r.fare||0)+
-"<br><b>مسافر:</b> "+(r.name||"-");
-
-const accept=
-document.createElement("button");
-
-accept.textContent=
-"✅ قبول سفر";
-
-accept.onclick=async()=>{
-
-accept.disabled=true;
-
-accept.textContent=
-"⏳ در حال قبول...";
-
-try{
-
-await updateDoc(
-doc(db,"rides",item.id),
-{
-status:"accepted",
-driverName:
-document.getElementById("driver").value||
-"راننده سفر آنلاین",
-
-plate:
-document.getElementById("plate").value||""
-}
-);
-
-accept.textContent=
-"✅ سفر پذیرفته شد";
-
-}catch(e){
-
-accept.disabled=false;
-
-accept.textContent=
-"قبول سفر";
-
-alert(
-"خطا: "+(e?.message||e)
-);
-
-}
-
-};
-
-box.appendChild(accept);
-
-list.appendChild(box);
-
-});
-
-},e=>{
-
-statusEl.textContent=
-"❌ خطا در دریافت سفرها:\n"+
-(e?.message||e);
-
-});
-
-});
-
-</script>
-
-</body>
-</html>
-HTML
-
-          cat > build-source/admin/www/index.html <<'HTML'
-<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سفر آنلاین - مدیریت</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-.box{max-width:700px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-button{width:100%;padding:14px;margin:7px 0;border-radius:10px;background:#222;color:#fff;border:0;font-size:16px;font-weight:bold}
-.ride{background:#f1f1f1;padding:15px;border-radius:12px;margin:12px 0}
-.status{padding:14px;background:#f5f5f5;border-radius:10px}
-</style>
-</head>
-<body>
-
-<div class="box">
-
-<h1>👑 سفر آنلاین</h1>
-<h3>مرکز مدیریت</h3>
-
-<button id="refresh">
-🔄 دریافت سفرها
-</button>
-
-<div id="status" class="status">
-در حال اتصال...
-</div>
-
-<div id="list"></div>
-
-</div>
-
-<script type="module">
-
-import {initializeApp}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-
-import {
-getFirestore,
-collection,
-onSnapshot
-}
-from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-
-const firebaseConfig={
-apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-authDomain:"safaronline.firebaseapp.com",
-projectId:"safaronline",
-storageBucket:"safaronline.firebasestorage.app",
-messagingSenderId:"945083323788",
-appId:"1:945083323788:android:1262253896af037e9cf2a9"
-};
-
-const statusEl=
-document.getElementById("status");
-
-let db;
-
-try{
-
-db=getFirestore(
-initializeApp(firebaseConfig)
-);
-
-statusEl.textContent=
-"✅ اتصال مدیریت آماده است.";
-
-}catch(e){
-
-statusEl.textContent=
-"❌ خطای اتصال Firebase:\n"+
-(e?.message||e);
-
-}
-
-function load(){
-
-if(!db)return;
-
-statusEl.textContent=
-"⏳ در حال دریافت سفرها...";
-
-onSnapshot(
-collection(db,"rides"),
-snapshot=>{
-
-const list=
-document.getElementById("list");
-
-list.innerHTML="";
-
-if(snapshot.empty){
-
-statusEl.textContent=
-"هیچ سفری ثبت نشده است.";
-
-return;
-}
-
-statusEl.textContent=
-"✅ تعداد سفرها: "+
-snapshot.size;
-
-snapshot.forEach(item=>{
-
-const r=item.data();
-
-const box=
-document.createElement("div");
-
-box.className="ride";
-
-box.innerHTML=
-"<b>مسافر:</b> "+(r.name||"-")+
-"<br><b>مبدأ:</b> "+(r.from||"-")+
-"<br><b>مقصد:</b> "+(r.to||"-")+
-"<br><b>کرایه:</b> "+(r.fare||0)+
-"<br><b>وضعیت:</b> "+(r.status||"-")+
-"<br><b>راننده:</b> "+(r.driverName||"-")+
-"<br><b>پلاک:</b> "+(r.plate||"-");
-
-list.appendChild(box);
-
-});
-
-},
-e=>{
-
-statusEl.textContent=
-"❌ خطا در دریافت سفرها:\n"+
-(e?.message||e);
-
-});
-
-}
-
-document
-.getElementById("refresh")
-.addEventListener("click",load);
-
-load();
-
-</script>
-
-</body>
-</html>
-HTML
-
-          for role in passenger driver admin
-          do
-
-            cat > build-source/$role/capacitor.config.json <<EOF
-{
-  "appId": "com.safaronline.app.$role",
-  "appName": "Safar Online $role",
-  "webDir": "www",
-  "server": {
-    "androidScheme": "https"
-  }
-}
-EOF
-
-            cd build-source/$role
-
-            npm init -y
-
-            npm install \
-              @capacitor/core \
-              @capacitor/cli \
-              @capacitor/android
-
-            npx cap add android
-
-            npx cap sync android
-
-            cd ../..
-
-          done
-
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -602,37 +25,78 @@ EOF
           distribution: temurin
           java-version: "21"
 
-      - name: Build Passenger
+      - name: Create three apps
+        shell: bash
         run: |
-          cd build-source/passenger/android
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-passenger.apk
+          set -e
+          rm -rf build-source dist
+          mkdir -p build-source/passenger/www
+          mkdir -p build-source/driver/www
+          mkdir -p build-source/admin/www
+          mkdir -p dist
+
+          echo 'PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZmEiIGRpcj0icnRsIj48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT7Yp9mE2KfZhtmI2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC90aXRsZT48c3R5bGU+Ym9keXtmb250LWZhbWlseTpBcmlhbDtiYWNrZ3JvdW5kOiNmNGY3ZjU7cGFkZGluZzoxOHB4fW1haW57bWF4LXdpZHRoOjUyMHB4O21hcmdpbjphdXRvO2JhY2tncm91bmQ6I2ZmZjt0ZXh0LWFsaWduOnJpZ2h0O3BhZGRpbmc6MjBweDti b3JkZXItcmFkaXVzOjE4cHh9aW5wdXQsYnV0dG9ue3dpZHRoOjEwMCU7cGFkZGluZzoxNHB4O21hcmdpbjo3cHggMDtib3JkZXItcmFkaXVzOjEwcHg7Ym94LXNpemluZzpib3JkZXItYm94fWJ1dHRvbntiYWNrZ3JvdW5kOiMxNTk0NDc7Y29sb3I6d2hpdGU7Ym9yZGVyOjA7Zm9udC13ZWlnaHQ6Ym9sZH0j bXNne3BhZGRpbmc6MTBweH08L3N0eWxlPjxtYWluPjxoMj7wn5CSPCDYp9mE2KfZhtmI2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC9oMj48aW5wdXQgaWQ9Im5hbWUiIHBsYWNlaG9sZGVyPSLZvtin2KjZhCI+PGlucHV0IGlkPSJwaG9uZSIgcGxhY2Vob2xkZXI9ItmF2KfYsdin2Kog2KfZhCI+PGlucHV0IGlkPSJmcm9tIiBwbGFjZWhvbGRlcj0i2YXYs9mH2Kcg2YjYp9mGINmG2YfZhCI+PGlucHV0IGlkPSJ0byIgcGxhY2Vob2xkZXI9ItmF2KfYsdmI2KjZhyDaqCI+PGlucHV0IGlkPSJmYXJlIiB0eXBlPSJudW1iZXIiIHBsYWNlaG9sZGVyPSLYp9mE2YTZhyDaqCI+PGJ1dHRvbiBvbmNsaWNrPSJyZXF1ZXN0UmlkZSgpIj7wn5CSPCDYp9mE2KfZhtmI2KjZhyDwn5CSPC9idXR0b24+PGRpdiBpZD0ibXNnIj48L2Rpdj48L21haW4+PC9odG1sPg==' | base64 -d > build-source/passenger/www/index.html
+
+          echo 'PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZmEiIGRpcj0icnRsIj48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT7Yp9mE2KfZhtmI2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPCDYp9mE2KfZhtmI2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC90aXRsZT48c3R5bGU+Ym9keXtmb250LWZhbWlseTpBcmlhbDtiYWNrZ3JvdW5kOiNmNGY3ZjU7cGFkZGluZzoxOHB4fW1haW57bWF4LXdpZHRoOjU2MHB4O21hcmdpbjphdXRvO2JhY2tncm91bmQ6I2ZmZjt0ZXh0LWFsaWduOnJpZ2h0O3BhZGRpbmc6MjBweDti b3JkZXItcmFkaXVzOjE4cHh9aW5wdXQsYnV0dG9ue3dpZHRoOjEwMCU7cGFkZGluZzoxNHB4O21hcmdpbjo3cHggMDtib3JkZXItcmFkaXVzOjEwcHg7Ym94LXNpemluZzpib3JkZXItYm94fWJ1dHRvbntiYWNrZ3JvdW5kOiMxNTk0NDc7Y29sb3I6d2hpdGU7Ym9yZGVyOjA7Zm9udC13ZWlnaHQ6Ym9sZH0ucmlkZXtib3JkZXI6MXB4IHNvbGlkICNkZGQ7Ym9yZGVyLXJhZGl1czoxMnB4O3BhZGRpbmc6MTRweDttYXJnaW46MTBweCAwfTwvc3R5bGU+PG1haW4+PGgyPvCfkqIg2KfZhNix2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC9oMj48aW5wdXQgaWQ9Im5hbWUiIHBsYWNlaG9sZGVyPSLYp9mE2KfZhtmI2KjZhyI+PGlucHV0IGlkPSJwbGF0ZSIgcGxhY2Vob2xkZXI9ItmF2KfZhNix2KjZhyDYp9mE2KfZhtmI2KjZhyI+PGJ1dHRvbiBvbmNsaWNrPSJvbmxpbmUoKSI+8J+TsCDYp9mE2KfZhtmI2KjZhyDwn5CSPC9idXR0b24+PGRpdiBpZD0ibXNnIj48L2Rpdj48ZGl2IGlkPSJyaWRlcyI+PC9kaXY+PC9tYWluPjwvaHRtbD4=' | base64 -d > build-source/driver/www/index.html
+
+          echo 'PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZmEiIGRpcj0icnRsIj48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT7wn5CYINmF2KfZhNix2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC90aXRsZT48c3R5bGU+Ym9keXtmb250LWZhbWlseTpBcmlhbDtiYWNrZ3JvdW5kOiNmNGY3ZjU7cGFkZGluZzoxOHB4fW1haW57bWF4LXdpZHRoOjY1MHB4O21hcmdpbjphdXRvO2JhY2tncm91bmQ6I2ZmZjt0ZXh0LWFsaWduOnJpZ2h0O3BhZGRpbmc6MjBweDti b3JkZXItcmFkaXVzOjE4cHh9LnJpZGV7Ym9yZGVyOjFweCBzb2xpZCAjZGRkO2JvcmRlci1yYWRpdXM6MTJweDtwYWRkaW5nOjE0cHg7bWFyZ2luOjEwcHggMH08L3N0eWxlPjxtYWluPjxoMj7wn5CYINmF2KfZhNix2KjZhyB8INmF2KfZhNix2KjZhyDwn5CSPC9oMj48cCBpZD0ibXNnIj7YqNmI2KjZhyDYp9mE2KfZhtmI2KjZhy4uLjwv cD48ZGl2IGlkPSJyaWRlcyI+PC9kaXY+PC9tYWluPjwvaHRtbD4=' | base64 -d > build-source/admin/www/index.html
+
+          for role in passenger driver admin; do
+            cd build-source/$role
+            npm init -y
+            npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+
+            cat > capacitor.config.json <<EOF
+          {
+            "appId": "com.safaronline.app.$role",
+            "appName": "Safar Online",
+            "webDir": "www",
+            "server": {
+              "androidScheme": "https"
+            }
+          }
+          EOF
+
+            npx cap add android
+            npx cap sync android
+            cd ../..
+          done
+
+      - name: Build Passenger
+        shell: bash
+        run: |
+          set -e
+          cd build-source/passenger
+          ./android/gradlew assembleDebug --no-daemon
+          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-passenger.apk
 
       - name: Build Driver
+        shell: bash
         run: |
-          cd build-source/driver/android
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-driver.apk
+          set -e
+          cd build-source/driver
+          ./android/gradlew assembleDebug --no-daemon
+          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-driver.apk
 
       - name: Build Admin
+        shell: bash
         run: |
-          cd build-source/admin/android
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-admin.apk
+          set -e
+          cd build-source/admin
+          ./android/gradlew assembleDebug --no-daemon
+          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-admin.apk
 
       - name: Verify APKs
+        shell: bash
         run: |
+          set -e
           ls -lh dist
-
           test -s dist/safar-online-passenger.apk
           test -s dist/safar-online-driver.apk
           test -s dist/safar-online-admin.apk
 
-      - name: Upload APKs
+      - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
         with:
-          name: safar-online-FIREBASE-FIXED-3-APKS
+          name: safar-online-3-apks-fixed
           path: dist/*.apk
