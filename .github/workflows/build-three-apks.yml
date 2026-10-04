@@ -11,122 +11,284 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      # -----------------------------
+      # 1. دریافت پروژه
+      # -----------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract Safar Online ZIP
+      # -----------------------------
+      # 2. پیدا کردن سورس سه برنامه
+      # -----------------------------
+      - name: Prepare Safar Online source
         shell: bash
         run: |
           set -e
 
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          echo "===================================="
+          echo "Preparing Safar Online source"
+          echo "===================================="
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Safar Online ZIP file was not found."
-            exit 1
-          fi
-
-          echo "Using ZIP: $ZIP_FILE"
+          rm -rf safar-source
+          rm -rf extracted-source
 
           mkdir -p safar-source
-          unzip -o "$ZIP_FILE" -d safar-source
 
-          echo "Extracted files:"
-          find safar-source -maxdepth 2 -type f | sort
+          # اگر سه پوشه در ریشه موجود باشند
+          if [ -d "passenger" ] && [ -d "driver" ] && [ -d "admin" ]; then
+            echo "Passenger/Driver/Admin folders found in repository."
 
-          if [ ! -d "safar-source/passenger" ]; then
-            echo "ERROR: passenger folder not found."
-            exit 1
+            cp -a passenger safar-source/passenger
+            cp -a driver safar-source/driver
+            cp -a admin safar-source/admin
+
+          else
+            echo "Three app folders are not in repository root."
+            echo "Searching for ZIP file..."
+
+            ZIP_FILE=$(find . -maxdepth 3 -type f -iname "*.zip" | head -n 1 || true)
+
+            if [ -z "$ZIP_FILE" ]; then
+              echo "ERROR: No ZIP file was found."
+              echo ""
+              echo "Repository files:"
+              find . -maxdepth 3 -print | sort
+              exit 1
+            fi
+
+            echo "ZIP found:"
+            echo "$ZIP_FILE"
+
+            mkdir -p extracted-source
+
+            unzip -o "$ZIP_FILE" -d extracted-source
+
+            echo ""
+            echo "Extracted folders:"
+            find extracted-source -maxdepth 5 -type d | sort
+
+            # پیدا کردن پوشه passenger
+            PASSENGER_DIR=$(find extracted-source -type d -iname "passenger" -print -quit || true)
+
+            # پیدا کردن پوشه driver
+            DRIVER_DIR=$(find extracted-source -type d -iname "driver" -print -quit || true)
+
+            # پیدا کردن پوشه admin
+            ADMIN_DIR=$(find extracted-source -type d -iname "admin" -print -quit || true)
+
+            echo ""
+            echo "Passenger:"
+            echo "$PASSENGER_DIR"
+
+            echo "Driver:"
+            echo "$DRIVER_DIR"
+
+            echo "Admin:"
+            echo "$ADMIN_DIR"
+
+            if [ -z "$PASSENGER_DIR" ]; then
+              echo "ERROR: passenger folder was not found inside ZIP."
+              find extracted-source -maxdepth 5 -type f | sort
+              exit 1
+            fi
+
+            if [ -z "$DRIVER_DIR" ]; then
+              echo "ERROR: driver folder was not found inside ZIP."
+              find extracted-source -maxdepth 5 -type f | sort
+              exit 1
+            fi
+
+            if [ -z "$ADMIN_DIR" ]; then
+              echo "ERROR: admin folder was not found inside ZIP."
+              find extracted-source -maxdepth 5 -type f | sort
+              exit 1
+            fi
+
+            cp -a "$PASSENGER_DIR" safar-source/passenger
+            cp -a "$DRIVER_DIR" safar-source/driver
+            cp -a "$ADMIN_DIR" safar-source/admin
           fi
 
-          if [ ! -d "safar-source/driver" ]; then
-            echo "ERROR: driver folder not found."
-            exit 1
-          fi
+          echo ""
+          echo "===================================="
+          echo "Final source structure"
+          echo "===================================="
 
-          if [ ! -d "safar-source/admin" ]; then
-            echo "ERROR: admin folder not found."
-            exit 1
-          fi
+          find safar-source -maxdepth 3 -type f | sort
 
+          echo ""
+          echo "Checking required files..."
+
+          test -f safar-source/passenger/package.json
+          test -f safar-source/passenger/index.html
+
+          test -f safar-source/driver/package.json
+          test -f safar-source/driver/index.html
+
+          test -f safar-source/admin/package.json
+          test -f safar-source/admin/index.html
+
+          echo ""
+          echo "Source preparation completed successfully."
+
+      # -----------------------------
+      # 3. Node.js
+      # -----------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
+      # -----------------------------
+      # 4. Java
+      # -----------------------------
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "17"
 
+      # -----------------------------
+      # 5. ساخت پوشه خروجی
+      # -----------------------------
+      - name: Create output folder
+        shell: bash
+        run: |
+          mkdir -p dist
+
+      # -----------------------------
+      # 6. ساخت APK مسافر
+      # -----------------------------
       - name: Build Passenger APK
         shell: bash
         run: |
           set -e
-          cd safar-source/passenger
 
+          echo "===================================="
+          echo "BUILDING PASSENGER APK"
+          echo "===================================="
+
+          cd "$GITHUB_WORKSPACE/safar-source/passenger"
+
+          echo "Installing npm packages..."
           npm install
-          npx cap add android
+
+          echo "Checking Capacitor..."
+
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
           npx cap sync android
 
           cd android
+
           chmod +x gradlew
+
           ./gradlew assembleDebug --no-daemon
 
-          mkdir -p ../../../dist
           cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-passenger.apk
+            "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
 
+          echo "Passenger APK created."
+
+      # -----------------------------
+      # 7. ساخت APK راننده
+      # -----------------------------
       - name: Build Driver APK
         shell: bash
         run: |
           set -e
-          cd safar-source/driver
 
+          echo "===================================="
+          echo "BUILDING DRIVER APK"
+          echo "===================================="
+
+          cd "$GITHUB_WORKSPACE/safar-source/driver"
+
+          echo "Installing npm packages..."
           npm install
-          npx cap add android
+
+          echo "Checking Capacitor..."
+
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
           npx cap sync android
 
           cd android
+
           chmod +x gradlew
+
           ./gradlew assembleDebug --no-daemon
 
-          mkdir -p ../../../dist
           cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-driver.apk
+            "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
 
+          echo "Driver APK created."
+
+      # -----------------------------
+      # 8. ساخت APK مدیریت
+      # -----------------------------
       - name: Build Admin APK
         shell: bash
         run: |
           set -e
-          cd safar-source/admin
 
+          echo "===================================="
+          echo "BUILDING ADMIN APK"
+          echo "===================================="
+
+          cd "$GITHUB_WORKSPACE/safar-source/admin"
+
+          echo "Installing npm packages..."
           npm install
-          npx cap add android
+
+          echo "Checking Capacitor..."
+
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
           npx cap sync android
 
           cd android
+
           chmod +x gradlew
+
           ./gradlew assembleDebug --no-daemon
 
-          mkdir -p ../../../dist
           cp app/build/outputs/apk/debug/app-debug.apk \
-            ../../../dist/safar-online-admin.apk
+            "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
 
-      - name: Check APKs
+          echo "Admin APK created."
+
+      # -----------------------------
+      # 9. بررسی APKها
+      # -----------------------------
+      - name: Check APK files
         shell: bash
         run: |
           set -e
-          echo "Built APK files:"
-          ls -lh dist/
 
-          test -f dist/safar-online-passenger.apk
-          test -f dist/safar-online-driver.apk
-          test -f dist/safar-online-admin.apk
+          echo "===================================="
+          echo "CHECKING FINAL APK FILES"
+          echo "===================================="
 
-      - name: Upload all 3 APKs
+          ls -lh "$GITHUB_WORKSPACE/dist/"
+
+          test -f "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
+          test -f "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
+          test -f "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
+
+          echo ""
+          echo "ALL 3 APK FILES WERE CREATED SUCCESSFULLY."
+
+      # -----------------------------
+      # 10. آپلود سه APK
+      # -----------------------------
+      - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
         with:
           name: safar-online-three-apks
