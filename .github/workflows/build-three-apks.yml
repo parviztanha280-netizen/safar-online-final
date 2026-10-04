@@ -13,13 +13,13 @@ jobs:
     steps:
 
       # ==========================================
-      # 1. دریافت پروژه
+      # 1. Checkout
       # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ==========================================
-      # 2. پیدا کردن و آماده کردن سورس
+      # 2. Find Safar Online source
       # ==========================================
       - name: Prepare Safar Online source
         shell: bash
@@ -27,7 +27,7 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "SEARCHING FOR SAFAR ONLINE SOURCE"
+          echo "PREPARING SAFAR ONLINE"
           echo "======================================"
 
           rm -rf safar-source
@@ -36,84 +36,91 @@ jobs:
           mkdir -p safar-source
           mkdir -p extracted-source
 
-          # ------------------------------------------
-          # اگر سه پوشه واقعی وجود داشته باشند
-          # ------------------------------------------
-          if [ -d "./passenger" ] && \
-             [ -d "./driver" ] && \
-             [ -d "./admin" ]; then
+          # --------------------------------------
+          # حالت اول:
+          # سه پوشه واقعاً وجود دارند
+          # --------------------------------------
+          if [ -d "passenger" ] && \
+             [ -d "driver" ] && \
+             [ -d "admin" ]; then
 
-            echo "Three application folders found."
+            echo "Passenger/Driver/Admin folders found."
 
-            cp -a "./passenger" "safar-source/passenger"
-            cp -a "./driver" "safar-source/driver"
-            cp -a "./admin" "safar-source/admin"
+            cp -a passenger safar-source/passenger
+            cp -a driver safar-source/driver
+            cp -a admin safar-source/admin
 
           else
 
-            echo "Three folders were not found."
-            echo "Searching for ZIP archive by file type..."
+            echo "Application folders are not in root."
+            echo "Searching all files for an archive..."
 
-            ZIP_FILE=""
+            ARCHIVE=""
 
-            # ------------------------------------------
-            # پیدا کردن ZIP حتی اگر پسوند .zip نداشته باشد
-            # ------------------------------------------
+            # --------------------------------------
+            # همه فایل‌ها را بررسی می‌کنیم
+            # --------------------------------------
             while IFS= read -r FILE; do
 
-              if file "$FILE" 2>/dev/null | grep -qi "Zip archive"; then
-                ZIP_FILE="$FILE"
+              echo "Testing:"
+              echo "$FILE"
+
+              if unzip -t "$FILE" >/dev/null 2>&1; then
+                ARCHIVE="$FILE"
+                echo "VALID ZIP FOUND:"
+                echo "$FILE"
                 break
               fi
 
             done < <(
               find . \
-                -maxdepth 3 \
                 -type f \
                 ! -path "./.git/*" \
                 ! -path "./safar-source/*" \
                 ! -path "./extracted-source/*" \
+                ! -path "./dist/*" \
                 -print
             )
 
-            # ------------------------------------------
-            # اگر ZIP پیدا نشد
-            # ------------------------------------------
-            if [ -z "$ZIP_FILE" ]; then
+            # --------------------------------------
+            # اگر آرشیو پیدا نشد
+            # --------------------------------------
+            if [ -z "$ARCHIVE" ]; then
 
               echo ""
-              echo "ERROR: ZIP archive was not found."
+              echo "======================================"
+              echo "ERROR: NO VALID ZIP ARCHIVE FOUND"
+              echo "======================================"
+
               echo ""
-              echo "Files currently in repository:"
-              find . -maxdepth 3 -type f -print | sort
+              echo "Repository files:"
+              find . -maxdepth 3 -print | sort
+
               echo ""
+              echo "The uploaded file is not a valid ZIP archive."
 
               exit 1
             fi
 
+            # --------------------------------------
+            # استخراج
+            # --------------------------------------
             echo ""
-            echo "ZIP ARCHIVE FOUND:"
-            echo "$ZIP_FILE"
-            echo ""
+            echo "Extracting archive..."
+            echo "$ARCHIVE"
 
-            echo "File information:"
-            file "$ZIP_FILE"
-
-            # ------------------------------------------
-            # استخراج ZIP
-            # ------------------------------------------
-            unzip -o "$ZIP_FILE" -d extracted-source
+            unzip -o "$ARCHIVE" -d extracted-source
 
             echo ""
             echo "======================================"
             echo "EXTRACTED CONTENT"
             echo "======================================"
 
-            find extracted-source -maxdepth 6 -print | sort
+            find extracted-source -maxdepth 8 -print | sort
 
-            # ------------------------------------------
-            # پیدا کردن passenger
-            # ------------------------------------------
+            # --------------------------------------
+            # پیدا کردن Passenger
+            # --------------------------------------
             PASSENGER_DIR=$(
               find extracted-source \
                 -type d \
@@ -121,9 +128,9 @@ jobs:
                 -print -quit || true
             )
 
-            # ------------------------------------------
-            # پیدا کردن driver
-            # ------------------------------------------
+            # --------------------------------------
+            # پیدا کردن Driver
+            # --------------------------------------
             DRIVER_DIR=$(
               find extracted-source \
                 -type d \
@@ -131,9 +138,9 @@ jobs:
                 -print -quit || true
             )
 
-            # ------------------------------------------
-            # پیدا کردن admin
-            # ------------------------------------------
+            # --------------------------------------
+            # پیدا کردن Admin
+            # --------------------------------------
             ADMIN_DIR=$(
               find extracted-source \
                 -type d \
@@ -142,88 +149,79 @@ jobs:
             )
 
             echo ""
-            echo "PASSENGER:"
+            echo "Passenger:"
             echo "$PASSENGER_DIR"
 
             echo ""
-            echo "DRIVER:"
+            echo "Driver:"
             echo "$DRIVER_DIR"
 
             echo ""
-            echo "ADMIN:"
+            echo "Admin:"
             echo "$ADMIN_DIR"
 
-            # ------------------------------------------
-            # بررسی passenger
-            # ------------------------------------------
+            # --------------------------------------
+            # بررسی Passenger
+            # --------------------------------------
             if [ -z "$PASSENGER_DIR" ]; then
-
               echo ""
-              echo "ERROR: passenger folder was not found."
-              echo ""
-              echo "Extracted files:"
-              find extracted-source -maxdepth 8 -print | sort
-
+              echo "ERROR: passenger folder not found."
               exit 1
             fi
 
-            # ------------------------------------------
-            # بررسی driver
-            # ------------------------------------------
+            # --------------------------------------
+            # بررسی Driver
+            # --------------------------------------
             if [ -z "$DRIVER_DIR" ]; then
-
               echo ""
-              echo "ERROR: driver folder was not found."
-              echo ""
-              echo "Extracted files:"
-              find extracted-source -maxdepth 8 -print | sort
-
+              echo "ERROR: driver folder not found."
               exit 1
             fi
 
-            # ------------------------------------------
-            # بررسی admin
-            # ------------------------------------------
+            # --------------------------------------
+            # بررسی Admin
+            # --------------------------------------
             if [ -z "$ADMIN_DIR" ]; then
-
               echo ""
-              echo "ERROR: admin folder was not found."
-              echo ""
-              echo "Extracted files:"
-              find extracted-source -maxdepth 8 -print | sort
-
+              echo "ERROR: admin folder not found."
               exit 1
             fi
 
-            # ------------------------------------------
+            # --------------------------------------
             # کپی سه برنامه
-            # ------------------------------------------
-            cp -a "$PASSENGER_DIR" "safar-source/passenger"
-            cp -a "$DRIVER_DIR" "safar-source/driver"
-            cp -a "$ADMIN_DIR" "safar-source/admin"
+            # --------------------------------------
+            cp -a "$PASSENGER_DIR" safar-source/passenger
+            cp -a "$DRIVER_DIR" safar-source/driver
+            cp -a "$ADMIN_DIR" safar-source/admin
 
           fi
 
-          echo ""
-          echo "======================================"
-          echo "CHECKING APPLICATION FILES"
-          echo "======================================"
+          # ======================================
+          # بررسی فایل‌های لازم
+          # ======================================
 
           echo ""
-          echo "Passenger files:"
+          echo "======================================"
+          echo "CHECKING PASSENGER"
+          echo "======================================"
+
           find safar-source/passenger -maxdepth 2 -type f | sort
 
           echo ""
-          echo "Driver files:"
+          echo "======================================"
+          echo "CHECKING DRIVER"
+          echo "======================================"
+
           find safar-source/driver -maxdepth 2 -type f | sort
 
           echo ""
-          echo "Admin files:"
+          echo "======================================"
+          echo "CHECKING ADMIN"
+          echo "======================================"
+
           find safar-source/admin -maxdepth 2 -type f | sort
 
-          # ------------------------------------------
-          # بررسی فایل‌های اصلی
-          # ------------------------------------------
+          # فایل‌های ضروری
           test -f safar-source/passenger/package.json
           test -f safar-source/passenger/index.html
 
@@ -235,19 +233,21 @@ jobs:
 
           echo ""
           echo "======================================"
-          echo "SOURCE PREPARATION SUCCESSFUL"
+          echo "SOURCE READY"
           echo "======================================"
 
+
       # ==========================================
-      # 3. نصب Node.js
+      # 3. Node
       # ==========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
+
       # ==========================================
-      # 4. نصب Java
+      # 4. Java
       # ==========================================
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -255,16 +255,18 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+
       # ==========================================
-      # 5. ساخت پوشه خروجی
+      # 5. Output
       # ==========================================
       - name: Create output folder
         shell: bash
         run: |
           mkdir -p dist
 
+
       # ==========================================
-      # 6. ساخت APK مسافر
+      # 6. Passenger APK
       # ==========================================
       - name: Build Passenger APK
         shell: bash
@@ -272,7 +274,7 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILDING PASSENGER APK"
+          echo "BUILD PASSENGER"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/passenger"
@@ -295,11 +297,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
 
-          echo ""
-          echo "PASSENGER APK READY"
+          echo "PASSENGER APK DONE"
+
 
       # ==========================================
-      # 7. ساخت APK راننده
+      # 7. Driver APK
       # ==========================================
       - name: Build Driver APK
         shell: bash
@@ -307,7 +309,7 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILDING DRIVER APK"
+          echo "BUILD DRIVER"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/driver"
@@ -330,11 +332,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
 
-          echo ""
-          echo "DRIVER APK READY"
+          echo "DRIVER APK DONE"
+
 
       # ==========================================
-      # 8. ساخت APK مدیریت
+      # 8. Admin APK
       # ==========================================
       - name: Build Admin APK
         shell: bash
@@ -342,7 +344,7 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILDING ADMIN APK"
+          echo "BUILD ADMIN"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/admin"
@@ -365,11 +367,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
 
-          echo ""
-          echo "ADMIN APK READY"
+          echo "ADMIN APK DONE"
+
 
       # ==========================================
-      # 9. بررسی نهایی
+      # 9. Final check
       # ==========================================
       - name: Check APK files
         shell: bash
@@ -388,11 +390,13 @@ jobs:
 
           echo ""
           echo "======================================"
-          echo "ALL THREE APKs CREATED SUCCESSFULLY"
+          echo "SUCCESS"
+          echo "ALL 3 APKs WERE CREATED"
           echo "======================================"
 
+
       # ==========================================
-      # 10. قرار دادن APKها برای دانلود
+      # 10. Upload APKs
       # ==========================================
       - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
