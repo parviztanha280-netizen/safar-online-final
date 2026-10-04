@@ -1,0 +1,134 @@
+name: Build 3 Safar Online APKs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract Safar Online ZIP
+        shell: bash
+        run: |
+          set -e
+
+          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Safar Online ZIP file was not found."
+            exit 1
+          fi
+
+          echo "Using ZIP: $ZIP_FILE"
+
+          mkdir -p safar-source
+          unzip -o "$ZIP_FILE" -d safar-source
+
+          echo "Extracted files:"
+          find safar-source -maxdepth 2 -type f | sort
+
+          if [ ! -d "safar-source/passenger" ]; then
+            echo "ERROR: passenger folder not found."
+            exit 1
+          fi
+
+          if [ ! -d "safar-source/driver" ]; then
+            echo "ERROR: driver folder not found."
+            exit 1
+          fi
+
+          if [ ! -d "safar-source/admin" ]; then
+            echo "ERROR: admin folder not found."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build Passenger APK
+        shell: bash
+        run: |
+          set -e
+          cd safar-source/passenger
+
+          npm install
+          npx cap add android
+          npx cap sync android
+
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+          mkdir -p ../../../dist
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-passenger.apk
+
+      - name: Build Driver APK
+        shell: bash
+        run: |
+          set -e
+          cd safar-source/driver
+
+          npm install
+          npx cap add android
+          npx cap sync android
+
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+          mkdir -p ../../../dist
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-driver.apk
+
+      - name: Build Admin APK
+        shell: bash
+        run: |
+          set -e
+          cd safar-source/admin
+
+          npm install
+          npx cap add android
+          npx cap sync android
+
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+          mkdir -p ../../../dist
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-admin.apk
+
+      - name: Check APKs
+        shell: bash
+        run: |
+          set -e
+          echo "Built APK files:"
+          ls -lh dist/
+
+          test -f dist/safar-online-passenger.apk
+          test -f dist/safar-online-driver.apk
+          test -f dist/safar-online-admin.apk
+
+      - name: Upload all 3 APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: safar-online-three-apks
+          path: dist/*.apk
+          if-no-files-found: error
