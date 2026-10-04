@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -31,6 +32,7 @@ jobs:
           set -e
 
           rm -rf build-source dist
+
           mkdir -p build-source/passenger/www
           mkdir -p build-source/driver/www
           mkdir -p build-source/admin/www
@@ -45,53 +47,100 @@ jobs:
           <title>سفر آنلاین - مسافر</title>
           <style>
           body{font-family:Arial;background:#f3f6f4;padding:20px}
-          main{max-width:500px;margin:auto;background:white;padding:20px;border-radius:18px}
+          main{max-width:520px;margin:auto;background:white;padding:20px;border-radius:18px}
           input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px}
+          input{border:1px solid #ddd}
           button{background:#16834b;color:white;border:0;font-weight:bold}
+          #msg{padding:10px;margin-top:10px}
           </style>
           </head>
           <body>
           <main>
           <h2>🚕 سفر آنلاین</h2>
           <h3>درخواست سفر</h3>
+
           <input id="name" placeholder="نام مسافر">
           <input id="phone" placeholder="شماره تماس">
           <input id="from" placeholder="مبدا">
           <input id="to" placeholder="مقصد">
           <input id="fare" type="number" placeholder="کرایه به افغانی">
+
           <button id="request">🚕 درخواست سفر</button>
+
           <p id="msg"></p>
           </main>
+
           <script type="module">
-          import{initializeApp}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-          import{getFirestore,collection,addDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-          const firebaseConfig={
-          apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-          authDomain:"safaronline.firebaseapp.com",
-          projectId:"safaronline",
-          storageBucket:"safaronline.firebasestorage.app",
-          messagingSenderId:"945083323788"
+
+          import { initializeApp }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+
+          import {
+            getFirestore,
+            collection,
+            addDoc,
+            serverTimestamp
+          }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+          const firebaseConfig = {
+            apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+            authDomain: "safaronline.firebaseapp.com",
+            projectId: "safaronline",
+            storageBucket: "safaronline.firebasestorage.app",
+            messagingSenderId: "945083323788"
           };
-          const db=getFirestore(initializeApp(firebaseConfig));
-          document.getElementById("request").onclick=async()=>{
-          const msg=document.getElementById("msg");
-          try{
-          const ref=await addDoc(collection(db,"rides"),{
-          passengerName:document.getElementById("name").value,
-          phone:document.getElementById("phone").value,
-          from:document.getElementById("from").value,
-          to:document.getElementById("to").value,
-          fare:Number(document.getElementById("fare").value||0),
-          status:"requested",
-          createdAt:serverTimestamp()
-          });
-          msg.textContent="درخواست ثبت شد: "+ref.id;
-          }catch(e){msg.textContent="خطا: "+e.message}
+
+          const app = initializeApp(firebaseConfig);
+          const db = getFirestore(app);
+
+          document.getElementById("request").onclick = async function(){
+
+            const msg = document.getElementById("msg");
+
+            try{
+
+              const data = {
+                passengerName: document.getElementById("name").value,
+                phone: document.getElementById("phone").value,
+                from: document.getElementById("from").value,
+                to: document.getElementById("to").value,
+                fare: Number(document.getElementById("fare").value || 0),
+                status: "requested",
+                createdAt: serverTimestamp()
+              };
+
+              if(!data.from || !data.to){
+                msg.textContent = "مبدا و مقصد را وارد کنید";
+                return;
+              }
+
+              const ref = await addDoc(
+                collection(db,"rides"),
+                data
+              );
+
+              msg.textContent = "درخواست سفر ثبت شد";
+
+              console.log("Ride ID:",ref.id);
+
+            }catch(error){
+
+              console.error(error);
+
+              msg.textContent =
+                "خطا در ثبت درخواست: " + error.message;
+
+            }
+
           };
+
           </script>
+
           </body>
           </html>
           EOF
+
 
           cat > build-source/driver/www/index.html <<'EOF'
           <!doctype html>
@@ -104,56 +153,121 @@ jobs:
           body{font-family:Arial;background:#f3f6f4;padding:20px}
           main{max-width:550px;margin:auto;background:white;padding:20px;border-radius:18px}
           input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px}
+          input{border:1px solid #ddd}
           button{background:#16834b;color:white;border:0;font-weight:bold}
           .ride{border:1px solid #ddd;padding:14px;margin:10px 0;border-radius:12px}
           </style>
           </head>
           <body>
+
           <main>
+
           <h2>🚗 سفر آنلاین</h2>
+
           <input id="name" placeholder="نام راننده">
           <input id="plate" placeholder="پلاک خودرو">
-          <button id="online">🟢 آنلاین شدن</button>
+
+          <button id="online">
+          🟢 آنلاین شدن
+          </button>
+
           <p id="msg"></p>
+
           <div id="rides"></div>
+
           </main>
+
           <script type="module">
-          import{initializeApp}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-          import{getFirestore,collection,query,where,onSnapshot,doc,updateDoc}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-          const firebaseConfig={
-          apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-          authDomain:"safaronline.firebaseapp.com",
-          projectId:"safaronline",
-          storageBucket:"safaronline.firebasestorage.app",
-          messagingSenderId:"945083323788"
+
+          import { initializeApp }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+
+          import {
+            getFirestore,
+            collection,
+            query,
+            where,
+            onSnapshot,
+            doc,
+            updateDoc
+          }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+          const firebaseConfig = {
+            apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+            authDomain: "safaronline.firebaseapp.com",
+            projectId: "safaronline",
+            storageBucket: "safaronline.firebasestorage.app",
+            messagingSenderId: "945083323788"
           };
-          const db=getFirestore(initializeApp(firebaseConfig));
-          document.getElementById("online").onclick=()=>{
-          document.getElementById("msg").textContent="راننده آنلاین شد";
-          const q=query(collection(db,"rides"),where("status","==","requested"));
-          onSnapshot(q,snap=>{
-          const box=document.getElementById("rides");
-          box.innerHTML="";
-          snap.forEach(item=>{
-          const r=item.data();
-          const div=document.createElement("div");
-          div.className="ride";
-          div.innerHTML="<b>سفر جدید</b><br>مبدا: "+r.from+"<br>مقصد: "+r.to+"<br>کرایه: "+r.fare+" افغانی<br><button>قبول سفر</button>";
-          div.querySelector("button").onclick=async()=>{
-          await updateDoc(doc(db,"rides",item.id),{
-          status:"accepted",
-          driverName:document.getElementById("name").value,
-          driverPlate:document.getElementById("plate").value
-          });
+
+          const app = initializeApp(firebaseConfig);
+          const db = getFirestore(app);
+
+          document.getElementById("online").onclick = function(){
+
+            document.getElementById("msg").textContent =
+              "راننده آنلاین شد";
+
+            const q = query(
+              collection(db,"rides"),
+              where("status","==","requested")
+            );
+
+            onSnapshot(q,function(snapshot){
+
+              const box =
+                document.getElementById("rides");
+
+              box.innerHTML = "";
+
+              snapshot.forEach(function(item){
+
+                const ride = item.data();
+
+                const div =
+                  document.createElement("div");
+
+                div.className = "ride";
+
+                div.innerHTML =
+                  "<b>🚕 سفر جدید</b><br>" +
+                  "مبدا: " + (ride.from || "") + "<br>" +
+                  "مقصد: " + (ride.to || "") + "<br>" +
+                  "کرایه: " + (ride.fare || 0) +
+                  " افغانی<br>" +
+                  "<button>قبول سفر</button>";
+
+                div.querySelector("button").onclick =
+                  async function(){
+
+                    await updateDoc(
+                      doc(db,"rides",item.id),
+                      {
+                        status:"accepted",
+                        driverName:
+                          document.getElementById("name").value,
+                        driverPlate:
+                          document.getElementById("plate").value
+                      }
+                    );
+
+                  };
+
+                box.appendChild(div);
+
+              });
+
+            });
+
           };
-          box.appendChild(div);
-          });
-          });
-          };
+
           </script>
+
           </body>
           </html>
           EOF
+
 
           cat > build-source/admin/www/index.html <<'EOF'
           <!doctype html>
@@ -169,43 +283,105 @@ jobs:
           </style>
           </head>
           <body>
+
           <main>
+
           <h2>👑 مدیریت سفر آنلاین</h2>
-          <p id="count">در حال دریافت اطلاعات...</p>
+
+          <p id="count">
+          در حال دریافت اطلاعات...
+          </p>
+
           <div id="rides"></div>
+
           </main>
+
           <script type="module">
-          import{initializeApp}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-          import{getFirestore,collection,onSnapshot}from"https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-          const firebaseConfig={
-          apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-          authDomain:"safaronline.firebaseapp.com",
-          projectId:"safaronline",
-          storageBucket:"safaronline.firebasestorage.app",
-          messagingSenderId:"945083323788"
+
+          import { initializeApp }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+
+          import {
+            getFirestore,
+            collection,
+            onSnapshot
+          }
+          from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+          const firebaseConfig = {
+            apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+            authDomain: "safaronline.firebaseapp.com",
+            projectId: "safaronline",
+            storageBucket: "safaronline.firebasestorage.app",
+            messagingSenderId: "945083323788"
           };
-          const db=getFirestore(initializeApp(firebaseConfig));
-          onSnapshot(collection(db,"rides"),snap=>{
-          document.getElementById("count").textContent="تعداد سفرها: "+snap.size;
-          const box=document.getElementById("rides");
-          box.innerHTML="";
-          snap.forEach(item=>{
-          const r=item.data();
-          const div=document.createElement("div");
-          div.className="ride";
-          div.innerHTML="<b>وضعیت: "+(r.status||"")+" </b><br>مسافر: "+(r.passengerName||"")+"<br>مبدا: "+(r.from||"")+"<br>مقصد: "+(r.to||"")+"<br>کرایه: "+(r.fare||0)+" افغانی";
-          box.appendChild(div);
-          });
-          });
+
+          const app = initializeApp(firebaseConfig);
+          const db = getFirestore(app);
+
+          onSnapshot(
+            collection(db,"rides"),
+            function(snapshot){
+
+              document.getElementById("count").textContent =
+                "تعداد سفرها: " + snapshot.size;
+
+              const box =
+                document.getElementById("rides");
+
+              box.innerHTML = "";
+
+              snapshot.forEach(function(item){
+
+                const ride = item.data();
+
+                const div =
+                  document.createElement("div");
+
+                div.className = "ride";
+
+                div.innerHTML =
+                  "<b>وضعیت: " +
+                  (ride.status || "") +
+                  "</b><br>" +
+                  "مسافر: " +
+                  (ride.passengerName || "") +
+                  "<br>" +
+                  "مبدا: " +
+                  (ride.from || "") +
+                  "<br>" +
+                  "مقصد: " +
+                  (ride.to || "") +
+                  "<br>" +
+                  "کرایه: " +
+                  (ride.fare || 0) +
+                  " افغانی";
+
+                box.appendChild(div);
+
+              });
+
+            }
+          );
+
           </script>
+
           </body>
           </html>
           EOF
 
-          for role in passenger driver admin; do
+
+          for role in passenger driver admin
+          do
+
             cd build-source/$role
+
             npm init -y
-            npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+
+            npm install \
+              @capacitor/core@7 \
+              @capacitor/cli@7 \
+              @capacitor/android@7
 
             cat > capacitor.config.json <<EOF
           {
@@ -219,42 +395,54 @@ jobs:
           EOF
 
             npx cap add android
+
             npx cap sync android
+
             cd ../..
+
           done
+
 
       - name: Build Passenger
         shell: bash
         run: |
           set -e
-          cd build-source/passenger
-          ./android/gradlew assembleDebug --no-daemon
-          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-passenger.apk
+          cd build-source/passenger/android
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-passenger.apk
+
 
       - name: Build Driver
         shell: bash
         run: |
           set -e
-          cd build-source/driver
-          ./android/gradlew assembleDebug --no-daemon
-          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-driver.apk
+          cd build-source/driver/android
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-driver.apk
+
 
       - name: Build Admin
         shell: bash
         run: |
           set -e
-          cd build-source/admin
-          ./android/gradlew assembleDebug --no-daemon
-          cp android/app/build/outputs/apk/debug/app-debug.apk ../../dist/safar-online-admin.apk
+          cd build-source/admin/android
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-admin.apk
+
 
       - name: Verify APKs
         shell: bash
         run: |
           set -e
+
           ls -lh dist
+
           test -s dist/safar-online-passenger.apk
           test -s dist/safar-online-driver.apk
           test -s dist/safar-online-admin.apk
+
+          echo "All three APKs created successfully."
+
 
       - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
