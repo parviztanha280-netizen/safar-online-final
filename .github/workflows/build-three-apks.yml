@@ -13,15 +13,15 @@ jobs:
     steps:
 
       # ==========================================
-      # 1. Checkout
+      # 1. دریافت پروژه
       # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ==========================================
-      # 2. Find Safar Online source
+      # 2. ساخت سه نسخه از سورس اصلی
       # ==========================================
-      - name: Prepare Safar Online source
+      - name: Prepare three applications
         shell: bash
         run: |
           set -e
@@ -31,214 +31,87 @@ jobs:
           echo "======================================"
 
           rm -rf safar-source
-          rm -rf extracted-source
-
           mkdir -p safar-source
-          mkdir -p extracted-source
+
+          # فایل‌های اصلی پروژه را به سه نسخه کپی می‌کنیم
+          mkdir -p safar-source/passenger
+          mkdir -p safar-source/driver
+          mkdir -p safar-source/admin
 
           # --------------------------------------
-          # حالت اول:
-          # سه پوشه واقعاً وجود دارند
+          # Passenger
           # --------------------------------------
-          if [ -d "passenger" ] && \
-             [ -d "driver" ] && \
-             [ -d "admin" ]; then
+          rsync -a \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ safar-source/passenger/
 
-            echo "Passenger/Driver/Admin folders found."
+          # --------------------------------------
+          # Driver
+          # --------------------------------------
+          rsync -a \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ safar-source/driver/
 
-            cp -a passenger safar-source/passenger
-            cp -a driver safar-source/driver
-            cp -a admin safar-source/admin
-
-          else
-
-            echo "Application folders are not in root."
-            echo "Searching all files for an archive..."
-
-            ARCHIVE=""
-
-            # --------------------------------------
-            # همه فایل‌ها را بررسی می‌کنیم
-            # --------------------------------------
-            while IFS= read -r FILE; do
-
-              echo "Testing:"
-              echo "$FILE"
-
-              if unzip -t "$FILE" >/dev/null 2>&1; then
-                ARCHIVE="$FILE"
-                echo "VALID ZIP FOUND:"
-                echo "$FILE"
-                break
-              fi
-
-            done < <(
-              find . \
-                -type f \
-                ! -path "./.git/*" \
-                ! -path "./safar-source/*" \
-                ! -path "./extracted-source/*" \
-                ! -path "./dist/*" \
-                -print
-            )
-
-            # --------------------------------------
-            # اگر آرشیو پیدا نشد
-            # --------------------------------------
-            if [ -z "$ARCHIVE" ]; then
-
-              echo ""
-              echo "======================================"
-              echo "ERROR: NO VALID ZIP ARCHIVE FOUND"
-              echo "======================================"
-
-              echo ""
-              echo "Repository files:"
-              find . -maxdepth 3 -print | sort
-
-              echo ""
-              echo "The uploaded file is not a valid ZIP archive."
-
-              exit 1
-            fi
-
-            # --------------------------------------
-            # استخراج
-            # --------------------------------------
-            echo ""
-            echo "Extracting archive..."
-            echo "$ARCHIVE"
-
-            unzip -o "$ARCHIVE" -d extracted-source
-
-            echo ""
-            echo "======================================"
-            echo "EXTRACTED CONTENT"
-            echo "======================================"
-
-            find extracted-source -maxdepth 8 -print | sort
-
-            # --------------------------------------
-            # پیدا کردن Passenger
-            # --------------------------------------
-            PASSENGER_DIR=$(
-              find extracted-source \
-                -type d \
-                -iname "passenger" \
-                -print -quit || true
-            )
-
-            # --------------------------------------
-            # پیدا کردن Driver
-            # --------------------------------------
-            DRIVER_DIR=$(
-              find extracted-source \
-                -type d \
-                -iname "driver" \
-                -print -quit || true
-            )
-
-            # --------------------------------------
-            # پیدا کردن Admin
-            # --------------------------------------
-            ADMIN_DIR=$(
-              find extracted-source \
-                -type d \
-                -iname "admin" \
-                -print -quit || true
-            )
-
-            echo ""
-            echo "Passenger:"
-            echo "$PASSENGER_DIR"
-
-            echo ""
-            echo "Driver:"
-            echo "$DRIVER_DIR"
-
-            echo ""
-            echo "Admin:"
-            echo "$ADMIN_DIR"
-
-            # --------------------------------------
-            # بررسی Passenger
-            # --------------------------------------
-            if [ -z "$PASSENGER_DIR" ]; then
-              echo ""
-              echo "ERROR: passenger folder not found."
-              exit 1
-            fi
-
-            # --------------------------------------
-            # بررسی Driver
-            # --------------------------------------
-            if [ -z "$DRIVER_DIR" ]; then
-              echo ""
-              echo "ERROR: driver folder not found."
-              exit 1
-            fi
-
-            # --------------------------------------
-            # بررسی Admin
-            # --------------------------------------
-            if [ -z "$ADMIN_DIR" ]; then
-              echo ""
-              echo "ERROR: admin folder not found."
-              exit 1
-            fi
-
-            # --------------------------------------
-            # کپی سه برنامه
-            # --------------------------------------
-            cp -a "$PASSENGER_DIR" safar-source/passenger
-            cp -a "$DRIVER_DIR" safar-source/driver
-            cp -a "$ADMIN_DIR" safar-source/admin
-
-          fi
-
-          # ======================================
-          # بررسی فایل‌های لازم
-          # ======================================
+          # --------------------------------------
+          # Admin
+          # --------------------------------------
+          rsync -a \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ safar-source/admin/
 
           echo ""
-          echo "======================================"
-          echo "CHECKING PASSENGER"
-          echo "======================================"
-
-          find safar-source/passenger -maxdepth 2 -type f | sort
+          echo "Three source folders created."
 
           echo ""
-          echo "======================================"
-          echo "CHECKING DRIVER"
-          echo "======================================"
-
-          find safar-source/driver -maxdepth 2 -type f | sort
+          echo "Passenger:"
+          ls -la safar-source/passenger
 
           echo ""
-          echo "======================================"
-          echo "CHECKING ADMIN"
-          echo "======================================"
+          echo "Driver:"
+          ls -la safar-source/driver
 
-          find safar-source/admin -maxdepth 2 -type f | sort
+          echo ""
+          echo "Admin:"
+          ls -la safar-source/admin
 
-          # فایل‌های ضروری
+          # --------------------------------------
+          # بررسی package.json
+          # --------------------------------------
           test -f safar-source/passenger/package.json
-          test -f safar-source/passenger/index.html
-
           test -f safar-source/driver/package.json
-          test -f safar-source/driver/index.html
-
           test -f safar-source/admin/package.json
+
+          # --------------------------------------
+          # بررسی index.html
+          # --------------------------------------
+          test -f safar-source/passenger/index.html
+          test -f safar-source/driver/index.html
           test -f safar-source/admin/index.html
 
           echo ""
-          echo "======================================"
-          echo "SOURCE READY"
-          echo "======================================"
+          echo "SOURCE PREPARATION SUCCESSFUL."
 
 
       # ==========================================
-      # 3. Node
+      # 3. Node.js
       # ==========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -257,7 +130,7 @@ jobs:
 
 
       # ==========================================
-      # 5. Output
+      # 5. ساخت پوشه خروجی
       # ==========================================
       - name: Create output folder
         shell: bash
@@ -266,7 +139,7 @@ jobs:
 
 
       # ==========================================
-      # 6. Passenger APK
+      # 6. Passenger
       # ==========================================
       - name: Build Passenger APK
         shell: bash
@@ -274,12 +147,24 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILD PASSENGER"
+          echo "BUILDING PASSENGER"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/passenger"
 
           npm install
+
+          # تنظیم شناسه برنامه مسافر
+          node -e "
+          const fs=require('fs');
+          const f='capacitor.config.json';
+          if(fs.existsSync(f)){
+            const c=JSON.parse(fs.readFileSync(f,'utf8'));
+            c.appId='com.safaronline.app.passenger';
+            c.appName='Safar Online - Passenger';
+            fs.writeFileSync(f,JSON.stringify(c,null,2));
+          }
+          "
 
           if [ ! -d "android" ]; then
             npx cap add android
@@ -297,11 +182,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
 
-          echo "PASSENGER APK DONE"
+          echo "PASSENGER APK CREATED."
 
 
       # ==========================================
-      # 7. Driver APK
+      # 7. Driver
       # ==========================================
       - name: Build Driver APK
         shell: bash
@@ -309,12 +194,24 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILD DRIVER"
+          echo "BUILDING DRIVER"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/driver"
 
           npm install
+
+          # تنظیم شناسه برنامه راننده
+          node -e "
+          const fs=require('fs');
+          const f='capacitor.config.json';
+          if(fs.existsSync(f)){
+            const c=JSON.parse(fs.readFileSync(f,'utf8'));
+            c.appId='com.safaronline.app.driver';
+            c.appName='Safar Online - Driver';
+            fs.writeFileSync(f,JSON.stringify(c,null,2));
+          }
+          "
 
           if [ ! -d "android" ]; then
             npx cap add android
@@ -332,11 +229,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
 
-          echo "DRIVER APK DONE"
+          echo "DRIVER APK CREATED."
 
 
       # ==========================================
-      # 8. Admin APK
+      # 8. Admin
       # ==========================================
       - name: Build Admin APK
         shell: bash
@@ -344,12 +241,24 @@ jobs:
           set -e
 
           echo "======================================"
-          echo "BUILD ADMIN"
+          echo "BUILDING ADMIN"
           echo "======================================"
 
           cd "$GITHUB_WORKSPACE/safar-source/admin"
 
           npm install
+
+          # تنظیم شناسه برنامه مدیریت
+          node -e "
+          const fs=require('fs');
+          const f='capacitor.config.json';
+          if(fs.existsSync(f)){
+            const c=JSON.parse(fs.readFileSync(f,'utf8'));
+            c.appId='com.safaronline.app.admin';
+            c.appName='Safar Online - Admin';
+            fs.writeFileSync(f,JSON.stringify(c,null,2));
+          }
+          "
 
           if [ ! -d "android" ]; then
             npx cap add android
@@ -367,11 +276,11 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk \
             "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
 
-          echo "ADMIN APK DONE"
+          echo "ADMIN APK CREATED."
 
 
       # ==========================================
-      # 9. Final check
+      # 9. بررسی APKها
       # ==========================================
       - name: Check APK files
         shell: bash
@@ -391,12 +300,12 @@ jobs:
           echo ""
           echo "======================================"
           echo "SUCCESS"
-          echo "ALL 3 APKs WERE CREATED"
+          echo "ALL THREE APKs CREATED"
           echo "======================================"
 
 
       # ==========================================
-      # 10. Upload APKs
+      # 10. آپلود APKها
       # ==========================================
       - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
