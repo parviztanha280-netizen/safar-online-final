@@ -20,7 +20,7 @@ jobs:
 
 
       # ==========================================
-      # 2. آماده سازی سه نسخه
+      # 2. آماده سازی سه برنامه
       # ==========================================
       - name: Prepare three applications
         shell: bash
@@ -40,7 +40,7 @@ jobs:
           mkdir -p dist
 
           # --------------------------------------
-          # کپی سورس اصلی برای Passenger
+          # کپی سورس اصلی به Passenger
           # --------------------------------------
           rsync -a \
             --exclude=".git" \
@@ -53,7 +53,7 @@ jobs:
             ./ safar-source/passenger/
 
           # --------------------------------------
-          # کپی سورس اصلی برای Driver
+          # کپی سورس اصلی به Driver
           # --------------------------------------
           rsync -a \
             --exclude=".git" \
@@ -66,7 +66,7 @@ jobs:
             ./ safar-source/driver/
 
           # --------------------------------------
-          # کپی سورس اصلی برای Admin
+          # کپی سورس اصلی به Admin
           # --------------------------------------
           rsync -a \
             --exclude=".git" \
@@ -78,8 +78,7 @@ jobs:
             --exclude="admin" \
             ./ safar-source/admin/
 
-          echo ""
-          echo "Three applications prepared."
+          echo "Source copies created."
 
 
       # ==========================================
@@ -92,6 +91,22 @@ jobs:
 
           cd safar-source/passenger
 
+          rm -rf www
+          mkdir -p www
+
+          rsync -a \
+            --exclude="www" \
+            --exclude="android" \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ www/
+
           node -e "
           const fs = require('fs');
 
@@ -101,7 +116,9 @@ jobs:
 
           if (fs.existsSync(file)) {
             try {
-              config = JSON.parse(fs.readFileSync(file, 'utf8'));
+              config = JSON.parse(
+                fs.readFileSync(file, 'utf8')
+              );
             } catch (e) {
               config = {};
             }
@@ -109,7 +126,7 @@ jobs:
 
           config.appId = 'com.safaronline.app.passenger';
           config.appName = 'Safar Online Passenger';
-          config.webDir = '.';
+          config.webDir = 'www';
 
           fs.writeFileSync(
             file,
@@ -117,7 +134,7 @@ jobs:
           );
           "
 
-          echo "Passenger configuration:"
+          echo "Passenger configured."
           cat capacitor.config.json
 
 
@@ -131,6 +148,22 @@ jobs:
 
           cd safar-source/driver
 
+          rm -rf www
+          mkdir -p www
+
+          rsync -a \
+            --exclude="www" \
+            --exclude="android" \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ www/
+
           node -e "
           const fs = require('fs');
 
@@ -140,7 +173,9 @@ jobs:
 
           if (fs.existsSync(file)) {
             try {
-              config = JSON.parse(fs.readFileSync(file, 'utf8'));
+              config = JSON.parse(
+                fs.readFileSync(file, 'utf8')
+              );
             } catch (e) {
               config = {};
             }
@@ -148,7 +183,7 @@ jobs:
 
           config.appId = 'com.safaronline.app.driver';
           config.appName = 'Safar Online Driver';
-          config.webDir = '.';
+          config.webDir = 'www';
 
           fs.writeFileSync(
             file,
@@ -156,7 +191,7 @@ jobs:
           );
           "
 
-          echo "Driver configuration:"
+          echo "Driver configured."
           cat capacitor.config.json
 
 
@@ -170,6 +205,22 @@ jobs:
 
           cd safar-source/admin
 
+          rm -rf www
+          mkdir -p www
+
+          rsync -a \
+            --exclude="www" \
+            --exclude="android" \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="safar-source" \
+            --exclude="dist" \
+            --exclude="passenger" \
+            --exclude="driver" \
+            --exclude="admin" \
+            ./ www/
+
           node -e "
           const fs = require('fs');
 
@@ -179,7 +230,9 @@ jobs:
 
           if (fs.existsSync(file)) {
             try {
-              config = JSON.parse(fs.readFileSync(file, 'utf8'));
+              config = JSON.parse(
+                fs.readFileSync(file, 'utf8')
+              );
             } catch (e) {
               config = {};
             }
@@ -187,7 +240,7 @@ jobs:
 
           config.appId = 'com.safaronline.app.admin';
           config.appName = 'Safar Online Admin';
-          config.webDir = '.';
+          config.webDir = 'www';
 
           fs.writeFileSync(
             file,
@@ -195,35 +248,48 @@ jobs:
           );
           "
 
-          echo "Admin configuration:"
+          echo "Admin configured."
           cat capacitor.config.json
 
 
       # ==========================================
-      # 6. بررسی فایل‌ها
+      # 6. بررسی سورس
       # ==========================================
-      - name: Verify source files
+      - name: Verify source
         shell: bash
         run: |
           set -e
 
           echo "======================================"
-          echo "VERIFYING SOURCE FILES"
+          echo "VERIFYING SOURCE"
           echo "======================================"
 
-          test -f safar-source/passenger/index.html
+          test -f safar-source/passenger/www/index.html
           test -f safar-source/passenger/package.json
           test -f safar-source/passenger/capacitor.config.json
 
-          test -f safar-source/driver/index.html
+          test -f safar-source/driver/www/index.html
           test -f safar-source/driver/package.json
           test -f safar-source/driver/capacitor.config.json
 
-          test -f safar-source/admin/index.html
+          test -f safar-source/admin/www/index.html
           test -f safar-source/admin/package.json
           test -f safar-source/admin/capacitor.config.json
 
-          echo "All source files are OK."
+          echo ""
+          echo "Passenger web files:"
+          find safar-source/passenger/www -maxdepth 2 -type f | sort
+
+          echo ""
+          echo "Driver web files:"
+          find safar-source/driver/www -maxdepth 2 -type f | sort
+
+          echo ""
+          echo "Admin web files:"
+          find safar-source/admin/www -maxdepth 2 -type f | sort
+
+          echo ""
+          echo "SOURCE CHECK PASSED."
 
 
       # ==========================================
@@ -246,7 +312,7 @@ jobs:
 
 
       # ==========================================
-      # 9. ساخت Passenger
+      # 9. Passenger APK
       # ==========================================
       - name: Build Passenger APK
         shell: bash
@@ -261,21 +327,15 @@ jobs:
 
           npm install
 
-          echo "Adding Android platform..."
-
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-
-          echo "Syncing Capacitor..."
 
           npx cap sync android
 
           cd android
 
           chmod +x gradlew
-
-          echo "Running Gradle..."
 
           ./gradlew assembleDebug --no-daemon
 
@@ -284,11 +344,11 @@ jobs:
             "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
 
           echo ""
-          echo "PASSENGER APK CREATED"
+          echo "PASSENGER APK CREATED."
 
 
       # ==========================================
-      # 10. ساخت Driver
+      # 10. Driver APK
       # ==========================================
       - name: Build Driver APK
         shell: bash
@@ -303,21 +363,15 @@ jobs:
 
           npm install
 
-          echo "Adding Android platform..."
-
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-
-          echo "Syncing Capacitor..."
 
           npx cap sync android
 
           cd android
 
           chmod +x gradlew
-
-          echo "Running Gradle..."
 
           ./gradlew assembleDebug --no-daemon
 
@@ -326,11 +380,11 @@ jobs:
             "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
 
           echo ""
-          echo "DRIVER APK CREATED"
+          echo "DRIVER APK CREATED."
 
 
       # ==========================================
-      # 11. ساخت Admin
+      # 11. Admin APK
       # ==========================================
       - name: Build Admin APK
         shell: bash
@@ -345,21 +399,15 @@ jobs:
 
           npm install
 
-          echo "Adding Android platform..."
-
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-
-          echo "Syncing Capacitor..."
 
           npx cap sync android
 
           cd android
 
           chmod +x gradlew
-
-          echo "Running Gradle..."
 
           ./gradlew assembleDebug --no-daemon
 
@@ -368,11 +416,11 @@ jobs:
             "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
 
           echo ""
-          echo "ADMIN APK CREATED"
+          echo "ADMIN APK CREATED."
 
 
       # ==========================================
-      # 12. بررسی APKهای نهایی
+      # 12. بررسی نهایی APKها
       # ==========================================
       - name: Check APK files
         shell: bash
@@ -391,13 +439,12 @@ jobs:
 
           echo ""
           echo "======================================"
-          echo "SUCCESS!"
-          echo "ALL 3 APKs WERE CREATED."
+          echo "SUCCESS - ALL 3 APKs CREATED"
           echo "======================================"
 
 
       # ==========================================
-      # 13. قرار دادن APKها برای دانلود
+      # 13. آپلود سه APK
       # ==========================================
       - name: Upload 3 APKs
         uses: actions/upload-artifact@v4
