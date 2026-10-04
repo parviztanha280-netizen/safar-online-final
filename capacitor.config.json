@@ -1,0 +1,8 @@
+{
+  "appId": "com.safaronline.app.passenger",
+  "appName": "سفر آنلاین",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

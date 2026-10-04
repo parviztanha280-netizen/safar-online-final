@@ -1,0 +1,1 @@
+export const firebaseConfig={"apiKey": "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30", "authDomain": "safaronline.firebaseapp.com", "projectId": "safaronline", "storageBucket": "safaronline.firebasestorage.app", "messagingSenderId": "945083323788", "appId": "1:945083323788:android:ee98efa3e671bd549cf2a9"};
