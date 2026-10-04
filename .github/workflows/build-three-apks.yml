@@ -122,9 +122,7 @@ jobs:
 
                 const body={fields:{
                   passengerName:{stringValue:name},
-                  phone:{stringValue:phone},
-                  from:{stringValue:from},
-                  to:{stringValue:to},
+                  phone:{stringValue:phone},                  to:{stringValue:to},
                   fare:{doubleValue:fare},
                   status:{stringValue:"requested"},
                   createdAt:{timestampValue:new Date().toISOString()}
@@ -136,14 +134,22 @@ jobs:
                     headers:{"Content-Type":"application/json"},
                     body:JSON.stringify(body)
                   });
+
                   const j=await r.json();
-                  if(!r.ok) throw new Error(j?.error?.message || "خطای Firestore");
+
+                  if(!r.ok){
+                    throw new Error(j?.error?.message||"خطای Firestore");
+                  }
+
                   rideName=j.name;
+
                   document.getElementById("current").style.display="block";
                   message("✅ سفر ثبت شد. منتظر راننده بمانید.","ok");
                   render(j.fields||body.fields);
+
                   if(poll) clearInterval(poll);
                   poll=setInterval(loadRide,4000);
+
                 }catch(e){
                   console.error(e);
                   message("❌ ثبت نشد: "+e.message,"err");
@@ -153,7 +159,14 @@ jobs:
 
               function render(f){
                 const status=field(f.status);
-                const labels={requested:"در انتظار راننده",accepted:"راننده سفر را قبول کرد",started:"سفر شروع شد",completed:"سفر پایان یافت",cancelled:"سفر لغو شد"};
+                const labels={
+                  requested:"در انتظار راننده",
+                  accepted:"راننده سفر را قبول کرد",
+                  started:"سفر شروع شد",
+                  completed:"سفر پایان یافت",
+                  cancelled:"سفر لغو شد"
+                };
+
                 document.getElementById("rideBox").innerHTML=
                   `<div class="ride">
                     <div class="row"><b>وضعیت</b><b>${esc(labels[status]||status)}</b></div>
@@ -167,17 +180,25 @@ jobs:
 
               async function loadRide(){
                 if(!rideName)return;
+
                 try{
                   const r=await fetch(`${BASE}/${rideName}?key=${API_KEY}`);
+
                   if(!r.ok)return;
+
                   const j=await r.json();
                   render(j.fields||{});
+
                   const s=field(j.fields?.status);
+
                   if(["completed","cancelled"].includes(s)){
                     clearInterval(poll);
                     document.getElementById("request").disabled=false;
                   }
-                }catch(e){console.log(e);}
+
+                }catch(e){
+                  console.log(e);
+                }
               }
 
               document.getElementById("request").onclick=createRide;
@@ -195,156 +216,378 @@ jobs:
             <meta name="theme-color" content="#159447">
             <title>سفر آنلاین - راننده</title>
             <style>
-              *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f3f7f4;color:#18231d}
-              .wrap{max-width:680px;margin:auto;padding:16px}.card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 24px #00000012;margin-bottom:14px}
-              h1{margin:0 0 4px;color:#159447;font-size:27px}.sub{color:#65736b;margin:0 0 18px}
-              label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}input,button{width:100%;padding:14px;border-radius:12px;font:inherit}
-              input{border:1px solid #d8e1db}button{border:0;background:#159447;color:#fff;font-weight:700;margin-top:12px}
-              button.alt{background:#25352c}.ride{border:1px solid #dce7df;border-radius:14px;padding:14px;margin-top:12px;background:#fbfdfb}
-              .row{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.status{padding:12px;border-radius:12px;background:#eef7f1;margin-top:14px;line-height:1.8}
-              .err{color:#b42318;font-weight:700}.empty{color:#68766e;text-align:center;padding:20px}
+              *{box-sizing:border-box}
+              body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f3f7f4;color:#18231d}
+              .wrap{max-width:680px;margin:auto;padding:16px}
+              .card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 24px #00000012;margin-bottom:14px}
+              h1{margin:0 0 4px;color:#159447;font-size:27px}
+              .sub{color:#65736b;margin:0 0 18px}
+              label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}
+              input,button{width:100%;padding:14px;border-radius:12px;font:inherit}
+              input{border:1px solid #d8e1db}
+              button{border:0;background:#159447;color:#fff;font-weight:700;margin-top:12px}
+              .ride{border:1px solid #dce7df;border-radius:14px;padding:14px;margin-top:12px;background:#fbfdfb}
+              .row{display:flex;justify-content:space-between;gap:10px;margin:7px 0}
+              .status{padding:12px;border-radius:12px;background:#eef7f1;margin-top:14px;line-height:1.8}
+              .err{color:#b42318;font-weight:700}
+              .empty{color:#68766e;text-align:center;padding:20px}
             </style>
           </head>
           <body>
             <div class="wrap">
+
               <div class="card">
                 <h1>🚗 سفر آنلاین</h1>
-                <p class="sub">پنل راننده</p>                <label>نام راننده</label>
+                <p class="sub">پنل راننده</p>
+
+                <label>نام راننده</label>
                 <input id="name" placeholder="نام و نام خانوادگی">
+
                 <label>پلاک خودرو</label>
                 <input id="plate" placeholder="مثلاً 12345 کابل">
+
                 <button id="online">🟢 آنلاین شدن</button>
-                <div id="msg" class="status">برای دیدن سفرهای جدید آنلاین شوید.</div>
+
+                <div id="msg" class="status">
+                  برای دیدن سفرهای جدید آنلاین شوید.
+                </div>
               </div>
 
               <div class="card">
                 <h3>🚕 سفرهای در انتظار</h3>
-                <div id="rides"><div class="empty">هنوز آنلاین نشده‌اید.</div></div>
+                <div id="rides">
+                  <div class="empty">هنوز آنلاین نشده‌اید.</div>
+                </div>
               </div>
 
               <div class="card" id="activeCard" style="display:none">
                 <h3>سفر فعال</h3>
                 <div id="active"></div>
               </div>
+
             </div>
 
             <script>
               const PROJECT="safaronline";
               const API_KEY="AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30";
               const BASE=`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
-              let timer=null, activeName=null;
 
-              function field(v){return v&&v.stringValue!==undefined?v.stringValue:"";}
-              function num(v){return v&&v.doubleValue!==undefined?Number(v.doubleValue):(v&&v.integerValue!==undefined?Number(v.integerValue):0);}
-              function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
-              function msg(t,err=false){const e=document.getElementById("msg");e.textContent=t;e.className="status"+(err?" err":"");}
+              let timer=null;
+              let activeName=null;
+
+              function field(v){
+                return v&&v.stringValue!==undefined?v.stringValue:"";
+              }
+
+              function num(v){
+                return v&&v.doubleValue!==undefined
+                  ?Number(v.doubleValue)
+                  :(v&&v.integerValue!==undefined
+                    ?Number(v.integerValue)
+                    :0);
+              }
+
+              function esc(s){
+                return String(s??"").replace(
+                  /[&<>"']/g,
+                  m=>({
+                    "&":"&amp;",
+                    "<":"&lt;",
+                    ">":"&gt;",
+                    "\"":"&quot;",
+                    "'":"&#39;"
+                  }[m])
+                );
+              }
+
+              function msg(t,err=false){
+                const e=document.getElementById("msg");
+                e.textContent=t;
+                e.className="status"+(err?" err":"");
+              }
 
               async function listRides(){
-                if(activeName){await loadActive();return;}
+                if(activeName){
+                  await loadActive();
+                  return;
+                }
+
                 try{
-                  const r=await fetch(`${BASE}/rides?pageSize=100&key=${API_KEY}`);
+                  const r=await fetch(
+                    `${BASE}/rides?pageSize=100&key=${API_KEY}`
+                  );
+
                   const j=await r.json();
-                  if(!r.ok)throw new Error(j?.error?.message||"خطای سرور");
+
+                  if(!r.ok){
+                    throw new Error(
+                      j?.error?.message||"خطای سرور"
+                    );
+                  }
+
                   const box=document.getElementById("rides");
                   box.innerHTML="";
-                  const docs=(j.documents||[]).filter(d=>field(d.fields?.status)==="requested");
-                  if(!docs.length){box.innerHTML='<div class="empty">سفر جدیدی در انتظار نیست.</div>';return;}
+
+                  const docs=(j.documents||[])
+                    .filter(
+                      d=>field(d.fields?.status)==="requested"
+                    );
+
+                  if(!docs.length){
+                    box.innerHTML=
+                      '<div class="empty">سفر جدیدی در انتظار نیست.</div>';
+                    return;
+                  }
 
                   docs.forEach(d=>{
-                    const id=d.name.split("/").pop(), f=d.fields||{};
+                    const f=d.fields||{};
                     const div=document.createElement("div");
+
                     div.className="ride";
-                    div.innerHTML=`<b>🚕 سفر جدید</b>
-                      <div class="row"><span>مسافر</span><span>${esc(field(f.passengerName))}</span></div>
-                      <div class="row"><span>مبدا</span><span>${esc(field(f.from))}</span></div>
-                      <div class="row"><span>مقصد</span><span>${esc(field(f.to))}</span></div>
-                      <div class="row"><span>کرایه</span><span>${num(f.fare)} افغانی</span></div>
+
+                    div.innerHTML=
+                      `<b>🚕 سفر جدید</b>
+                      <div class="row">
+                        <span>مسافر</span>
+                        <span>${esc(field(f.passengerName))}</span>
+                      </div>
+                      <div class="row">
+                        <span>مبدا</span>
+                        <span>${esc(field(f.from))}</span>
+                      </div>
+                      <div class="row">
+                        <span>مقصد</span>
+                        <span>${esc(field(f.to))}</span>
+                      </div>
+                      <div class="row">
+                        <span>کرایه</span>
+                        <span>${num(f.fare)} افغانی</span>
+                      </div>
                       <button>قبول سفر</button>`;
-                    div.querySelector("button").onclick=()=>acceptRide(d.name,f);
+
+                    div.querySelector("button").onclick=
+                      ()=>acceptRide(d.name,f);
+
                     box.appendChild(div);
                   });
+
                 }catch(e){
-                  document.getElementById("rides").innerHTML='<div class="empty">❌ '+esc(e.message)+'</div>';
+                  document.getElementById("rides").innerHTML=
+                    '<div class="empty">❌ '+esc(e.message)+'</div>';
                 }
               }
 
               async function acceptRide(name,f){
-                const driver=document.getElementById("name").value.trim();
-                const plate=document.getElementById("plate").value.trim();
-                if(!driver||!plate){msg("نام و پلاک را وارد کنید.",true);return;}
-                const body={fields:{
-                  passengerName:f.passengerName||{stringValue:""},
-                  phone:f.phone||{stringValue:""},
-                  from:f.from||{stringValue:""},
-                  to:f.to||{stringValue:""},
-                  fare:f.fare||{doubleValue:0},
-                  status:{stringValue:"accepted"},
-                  driverName:{stringValue:driver},
-                  driverPlate:{stringValue:plate},
-                  createdAt:f.createdAt||{timestampValue:new Date().toISOString()}
-                }};
-                try{
-                  const r=await fetch(`${BASE}/${name}?key=${API_KEY}`,{
-                    method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
-                  });
-                  const j=await r.json();
-                  if(!r.ok)throw new Error(j?.error?.message||"قبول سفر ناموفق بود");
-                  activeName=name;
-                  document.getElementById("activeCard").style.display="block";
-                  msg("✅ سفر قبول شد.");
-                  await loadActive();
-                }catch(e){msg("❌ "+e.message,true);}
-              }
+                const driver=
+                  document.getElementById("name").value.trim();
 
-              async function updateStatus(status){
-                if(!activeName)return;
+                const plate=
+                  document.getElementById("plate").value.trim();
+
+                if(!driver||!plate){
+                  msg("نام و پلاک را وارد کنید.",true);
+                  return;
+                }
+
+                const body={
+                  fields:{
+                    passengerName:
+                      f.passengerName||{stringValue:""},
+                    phone:
+                      f.phone||{stringValue:""},
+                    from:
+                      f.from||{stringValue:""},
+                    to:
+                      f.to||{stringValue:""},
+                    fare:
+                      f.fare||{doubleValue:0},
+                    status:
+                      {stringValue:"accepted"},
+                    driverName:
+                      {stringValue:driver},
+                    driverPlate:
+                      {stringValue:plate},
+                    createdAt:
+                      f.createdAt||
+                      {timestampValue:new Date().toISOString()}
+                  }
+                };
+
                 try{
-                  const r=await fetch(`${BASE}/${activeName}?updateMask.fieldPaths=status&key=${API_KEY}`,{
-                    method:"PATCH",headers:{"Content-Type":"application/json"},
-                    body:JSON.stringify({fields:{status:{stringValue:status}}})
-                  });
-                  if(!r.ok)throw new Error("تغییر وضعیت انجام نشد");
+                  const r=await fetch(
+                    `${BASE}/${name}?key=${API_KEY}`,
+                    {
+                      method:"PATCH",
+                      headers:{
+                        "Content-Type":"application/json"
+                      },
+                      body:JSON.stringify(body)
+                    }
+                  );
+
+                  const j=await r.json();
+
+                  if(!r.ok){
+                    throw new Error(
+                      j?.error?.message||
+                      "قبول سفر ناموفق بود"
+                    );
+                  }
+
+                  activeName=name;
+
+                  document.getElementById("activeCard")
+                    .style.display="block";
+
+                  msg("✅ سفر قبول شد.");
+
                   await loadActive();
-                }catch(e){msg("❌ "+e.message,true);}
+
+                }catch(e){
+                  msg("❌ "+e.message,true);
+                }
+              }              async function updateStatus(status){
+                if(!activeName)return;
+
+                try{
+                  const r=await fetch(
+                    `${BASE}/${activeName}?updateMask.fieldPaths=status&key=${API_KEY}`,
+                    {
+                      method:"PATCH",
+                      headers:{
+                        "Content-Type":"application/json"
+                      },
+                      body:JSON.stringify({
+                        fields:{
+                          status:{
+                            stringValue:status
+                          }
+                        }
+                      })
+                    }
+                  );
+
+                  if(!r.ok){
+                    throw new Error("تغییر وضعیت انجام نشد");
+                  }
+
+                  await loadActive();
+
+                }catch(e){
+                  msg("❌ "+e.message,true);
+                }
               }
 
               async function loadActive(){
                 if(!activeName)return;
+
                 try{
-                  const r=await fetch(`${BASE}/${activeName}?key=${API_KEY}`);
-                  if(!r.ok){activeName=null;document.getElementById("activeCard").style.display="none";return;}
-                  const j=await r.json(), f=j.fields||{}, s=field(f.status);
+                  const r=await fetch(
+                    `${BASE}/${activeName}?key=${API_KEY}`
+                  );
+
+                  if(!r.ok){
+                    activeName=null;
+                    document.getElementById("activeCard")
+                      .style.display="none";
+                    return;
+                  }
+
+                  const j=await r.json();
+                  const f=j.fields||{};
+                  const s=field(f.status);
+
                   document.getElementById("active").innerHTML=
                     `<div class="ride">
-                      <div class="row"><b>وضعیت</b><b>${esc(s)}</b></div>
-                      <div class="row"><span>مبدا</span><span>${esc(field(f.from))}</span></div>
-                      <div class="row"><span>مقصد</span><span>${esc(field(f.to))}</span></div>
-                      <div class="row"><span>مسافر</span><span>${esc(field(f.passengerName))}</span></div>
-                      <div class="row"><span>کرایه</span><span>${num(f.fare)} افغانی</span></div>
-                      ${s==="accepted"?'<button id="start">🚗 شروع سفر</button>':""}
-                      ${s==="started"?'<button id="finish">✅ پایان سفر</button>':""}
+                      <div class="row">
+                        <b>وضعیت</b>
+                        <b>${esc(s)}</b>
+                      </div>
+
+                      <div class="row">
+                        <span>مبدا</span>
+                        <span>${esc(field(f.from))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>مقصد</span>
+                        <span>${esc(field(f.to))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>مسافر</span>
+                        <span>${esc(field(f.passengerName))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>کرایه</span>
+                        <span>${num(f.fare)} افغانی</span>
+                      </div>
+
+                      ${
+                        s==="accepted"
+                        ?'<button id="start">🚗 شروع سفر</button>'
+                        :""
+                      }
+
+                      ${
+                        s==="started"
+                        ?'<button id="finish">✅ پایان سفر</button>'
+                        :""
+                      }
+
                     </div>`;
-                  document.getElementById("start")?.addEventListener("click",()=>updateStatus("started"));
-                  document.getElementById("finish")?.addEventListener("click",()=>{updateStatus("completed");});
-                  if(s==="completed"){
-                    msg("✅ سفر با موفقیت پایان یافت.");
+
+                  document.getElementById("start")
+                    ?.addEventListener(
+                      "click",
+                      ()=>updateStatus("started")
+                    );
+
+                  document.getElementById("finish")
+                    ?.addEventListener(
+                      "click",
+                      ()=>{
+                        updateStatus("completed");
+                      }
+                    );
+
+                  if(s==="completed"||s==="cancelled"){
                     activeName=null;
-                    setTimeout(()=>{
-                      document.getElementById("activeCard").style.display="none";
-                      listRides();
-                    },1500);
+                    document.getElementById("activeCard")
+                      .style.display="none";
                   }
-                }catch(e){msg("❌ "+e.message,true);}
+
+                }catch(e){
+                  console.log(e);
+                }
               }
 
               document.getElementById("online").onclick=async()=>{
-                const name=document.getElementById("name").value.trim();
-                const plate=document.getElementById("plate").value.trim();
-                if(!name||!plate){msg("نام و پلاک را وارد کنید.",true);return;}
-                msg("🟢 راننده آنلاین شد.");
-                if(timer)clearInterval(timer);
+                const name=
+                  document.getElementById("name").value.trim();
+
+                const plate=
+                  document.getElementById("plate").value.trim();
+
+                if(!name||!plate){
+                  msg(
+                    "نام و پلاک را کامل وارد کنید.",
+                    true
+                  );
+                  return;
+                }
+
+                msg("✅ راننده آنلاین شد.");
+
                 await listRides();
-                timer=setInterval(listRides,5000);
+
+                if(timer)clearInterval(timer);
+
+                timer=setInterval(
+                  listRides,
+                  5000
+                );
               };
             </script>
           </body>
@@ -357,141 +600,293 @@ jobs:
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-            <meta name="theme-color" content="#159447">
+            <meta name="theme-color" content="#18231d">
             <title>سفر آنلاین - مدیریت</title>
             <style>
-              *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f3f7f4;color:#18231d}
-              .wrap{max-width:900px;margin:auto;padding:16px}.card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 24px #00000012;margin-bottom:14px}
-              h1{margin:0 0 4px;color:#159447;font-size:27px}.sub{color:#65736b;margin:0 0 18px}
-              .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{background:#eef7f1;border-radius:14px;padding:15px;text-align:center}
-              .stat b{display:block;font-size:25px;color:#159447;margin-top:6px}.ride{border:1px solid #dce7df;border-radius:14px;padding:14px;margin-top:12px;background:#fbfdfb}
-              .row{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.empty{color:#68766e;text-align:center;padding:20px}
-              @media(max-width:600px){.stats{grid-template-columns:1fr}.row{font-size:13px}}
+              *{box-sizing:border-box}
+              body{
+                margin:0;
+                font-family:Tahoma,Arial,sans-serif;
+                background:#f3f7f4;
+                color:#18231d
+              }
+              .wrap{
+                max-width:760px;
+                margin:auto;
+                padding:16px
+              }
+              .card{
+                background:#fff;
+                border-radius:20px;
+                padding:20px;
+                box-shadow:0 5px 24px #00000012;
+                margin-bottom:14px
+              }
+              h1{
+                margin:0 0 4px;
+                color:#18231d;
+                font-size:27px
+              }
+              .sub{
+                color:#65736b;
+                margin:0 0 18px
+              }
+              .stats{
+                display:grid;
+                grid-template-columns:repeat(3,1fr);
+                gap:9px
+              }
+              .stat{
+                background:#eef7f1;
+                border-radius:14px;
+                padding:14px;
+                text-align:center
+              }
+              .stat b{
+                display:block;
+                font-size:24px;
+                color:#159447
+              }
+              .ride{
+                border:1px solid #dce7df;
+                border-radius:14px;
+                padding:14px;
+                margin-top:12px;
+                background:#fbfdfb
+              }
+              .row{
+                display:flex;
+                justify-content:space-between;
+                gap:10px;
+                margin:7px 0
+              }
+              .muted{
+                color:#68766e;
+                font-size:13px
+              }
+              .empty{
+                text-align:center;
+                padding:20px;
+                color:#68766e
+              }
             </style>
           </head>
+
           <body>
             <div class="wrap">
+
               <div class="card">
                 <h1>👑 سفر آنلاین</h1>
-                <p class="sub">مرکز مدیریت</p>
+                <p class="sub">مرکز مدیریت آنلاین</p>
+
                 <div class="stats">
-                  <div class="stat">همه سفرها<b id="all">0</b></div>
-                  <div class="stat">سفرهای باز<b id="open">0</b></div>
-                  <div class="stat">تکمیل‌شده<b id="done">0</b></div>
+                  <div class="stat">
+                    <b id="all">0</b>
+                    کل سفر
+                  </div>
+
+                  <div class="stat">
+                    <b id="open">0</b>
+                    درخواست
+                  </div>
+
+                  <div class="stat">
+                    <b id="done">0</b>
+                    تکمیل‌شده
+                  </div>
                 </div>
               </div>
 
               <div class="card">
-                <h3>📋 فهرست سفرها</h3>
-                <div id="rides"><div class="empty">در حال دریافت اطلاعات...</div></div>
+                <h3>📋 سفرها</h3>
+
+                <div id="rides">
+                  <div class="empty">
+                    در حال دریافت...
+                  </div>
+                </div>
               </div>
+
             </div>
 
             <script>
               const PROJECT="safaronline";
-              const API_KEY="AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30";
-              const BASE=`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
 
-              function field(v){return v&&v.stringValue!==undefined?v.stringValue:"";}
-              function num(v){return v&&v.doubleValue!==undefined?Number(v.doubleValue):(v&&v.integerValue!==undefined?Number(v.integerValue):0);}
-              function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+              const API_KEY=
+                "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30";
+
+              const BASE=
+                `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+
+              function field(v){
+                return v&&v.stringValue!==undefined
+                  ?v.stringValue
+                  :"";
+              }
+
+              function num(v){
+                return v&&v.doubleValue!==undefined
+                  ?Number(v.doubleValue)
+                  :(v&&v.integerValue!==undefined
+                    ?Number(v.integerValue)
+                    :0);
+              }
+
+              function esc(s){
+                return String(s??"").replace(
+                  /[&<>"']/g,
+                  m=>({
+                    "&":"&amp;",
+                    "<":"&lt;",
+                    ">":"&gt;",
+                    "\"":"&quot;",
+                    "'":"&#39;"
+                  }[m])
+                );
+              }
 
               async function load(){
                 try{
-                  const r=await fetch(`${BASE}/rides?pageSize=100&key=${API_KEY}`);
+                  const r=await fetch(
+                    `${BASE}/rides?pageSize=100&key=${API_KEY}`
+                  );
+
                   const j=await r.json();
-                  if(!r.ok)throw new Error(j?.error?.message||"خطای سرور");
+
+                  if(!r.ok){
+                    throw new Error(
+                      j?.error?.message||
+                      "خطای Firestore"
+                    );
+                  }
 
                   const docs=j.documents||[];
-                  const open=docs.filter(d=>!["completed","cancelled"].includes(field(d.fields?.status))).length;
-                  const done=docs.filter(d=>field(d.fields?.status)==="completed").length;
 
-                  document.getElementById("all").textContent=docs.length;
-                  document.getElementById("open").textContent=open;
-                  document.getElementById("done").textContent=done;
+                  document.getElementById("all")
+                    .textContent=docs.length;
 
-                  const box=document.getElementById("rides");
+                  document.getElementById("open")
+                    .textContent=
+                      docs.filter(
+                        d=>[
+                          "requested",
+                          "accepted",
+                          "started"
+                        ].includes(
+                          field(d.fields?.status)
+                        )
+                      ).length;
+
+                  document.getElementById("done")
+                    .textContent=
+                      docs.filter(
+                        d=>field(
+                          d.fields?.status
+                        )==="completed"
+                      ).length;
+
+                  const box=
+                    document.getElementById("rides");
+
                   box.innerHTML="";
+
                   if(!docs.length){
-                    box.innerHTML='<div class="empty">هنوز هیچ سفری ثبت نشده است.</div>';
+                    box.innerHTML=
+                      '<div class="empty">هنوز سفری ثبت نشده است.</div>';
                     return;
                   }
 
                   docs.reverse().forEach(d=>{
-                    const f=d.fields||{}, s=field(f.status);
-                    const div=document.createElement("div");
+                    const f=d.fields||{};
+                    const div=
+                      document.createElement("div");
+
                     div.className="ride";
+
                     div.innerHTML=
-                      `<div class="row"><b>وضعیت</b><b>${esc(s)}</b></div>
-                       <div class="row"><span>مسافر</span><span>${esc(field(f.passengerName))}</span></div>
-                       <div class="row"><span>راننده</span><span>${esc(field(f.driverName)||"هنوز تعیین نشده")}</span></div>
-                       <div class="row"><span>پلاک</span><span>${esc(field(f.driverPlate)||"-")}</span></div>
-                       <div class="row"><span>مبدا</span><span>${esc(field(f.from))}</span></div>
-                       <div class="row"><span>مقصد</span><span>${esc(field(f.to))}</span></div>
-                       <div class="row"><span>کرایه</span><span>${num(f.fare)} افغانی</span></div>`;
+                      `<div class="row">
+                        <b>وضعیت</b>
+                        <b>${esc(field(f.status))}</b>
+                      </div>
+
+                      <div class="row">
+                        <span>مسافر</span>
+                        <span>${esc(field(f.passengerName))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>راننده</span>
+                        <span>${esc(field(f.driverName)||"—")}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>مبدا</span>
+                        <span>${esc(field(f.from))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>مقصد</span>
+                        <span>${esc(field(f.to))}</span>
+                      </div>
+
+                      <div class="row">
+                        <span>کرایه</span>
+                        <span>${num(f.fare)} افغانی</span>
+                      </div>`;
+
                     box.appendChild(div);
                   });
+
                 }catch(e){
-                  document.getElementById("rides").innerHTML='<div class="empty">❌ '+esc(e.message)+'</div>';
+                  document.getElementById("rides").innerHTML=
+                    '<div class="empty">❌ '+
+                    esc(e.message)+
+                    '</div>';
                 }
               }
 
               load();
-              setInterval(load,5000);
+
+              setInterval(
+                load,
+                5000
+              );
             </script>
           </body>
           </html>
-          HTML          cat > build-source/passenger/capacitor.config.json <<'JSON'
+          HTML          for role in passenger driver admin; do
+            cd "build-source/$role"
+
+            npm init -y >/dev/null 2>&1
+
+            npm install --no-audit --no-fund \
+              @capacitor/core@7 \
+              @capacitor/cli@7 \
+              @capacitor/android@7
+
+            cat > capacitor.config.json <<EOF
           {
-            "appId": "com.safaronline.app.passenger",
-            "appName": "سفر آنلاین - مسافر",
+            "appId": "com.safaronline.app.$role",
+            "appName": "Safar Online - $role",
             "webDir": "www",
-            "bundledWebRuntime": false
-          }
-          JSON
-
-          cat > build-source/driver/capacitor.config.json <<'JSON'
-          {
-            "appId": "com.safaronline.app.driver",
-            "appName": "سفر آنلاین - راننده",
-            "webDir": "www",
-            "bundledWebRuntime": false
-          }
-          JSON
-
-          cat > build-source/admin/capacitor.config.json <<'JSON'
-          {
-            "appId": "com.safaronline.app.admin",
-            "appName": "سفر آنلاین - مدیریت",
-            "webDir": "www",
-            "bundledWebRuntime": false
-          }
-          JSON
-
-          for APP in passenger driver admin; do
-            cd "build-source/$APP"
-
-            cat > package.json <<'JSON'
-            {
-              "name": "safar-online-app",
-              "version": "1.0.0",
-              "private": true,
-              "scripts": {
-                "build": "echo build"
-              },
-              "dependencies": {
-                "@capacitor/android": "^7.4.0",
-                "@capacitor/core": "^7.4.0",
-                "@capacitor/cli": "^7.4.0"
-              }
+            "server": {
+              "androidScheme": "https"
             }
-            JSON
+          }
+          EOF
 
-            npm install --no-audit --no-fund
+            echo "Creating Android project for $role..."
 
             npx cap add android
 
-            npx cap copy android
+            test -d android
+            test -f android/gradlew
+
+            chmod +x android/gradlew
+
+            npx cap sync android
+
+            test -d android/app
 
             cd ../..
           done
@@ -500,45 +895,63 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           cd build-source/passenger/android
+
+          test -f gradlew
+
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
+
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-passenger.apk
 
       - name: Build Driver APK
         shell: bash
         run: |
           set -euo pipefail
+
           cd build-source/driver/android
+
+          test -f gradlew
+
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
+
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-driver.apk
 
       - name: Build Admin APK
         shell: bash
         run: |
           set -euo pipefail
-          cd build-source/admin/android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
 
-      - name: Verify APKs
+          cd build-source/admin/android
+
+          test -f gradlew
+
+          chmod +x gradlew
+
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-admin.apk
+
+      - name: Verify all APKs
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Checking generated APK files..."
+          ls -lh dist
 
-          test -f dist/safar-online-passenger.apk
-          test -f dist/safar-online-driver.apk
-          test -f dist/safar-online-admin.apk
+          test -s dist/safar-online-passenger.apk
+          test -s dist/safar-online-driver.apk
+          test -s dist/safar-online-admin.apk
 
-          ls -lh dist/
-
-      - name: Upload 3 APKs
+      - name: Upload final APKs
         uses: actions/upload-artifact@v4
         with:
           name: safar-online-FINAL-3-APKs
           path: dist/*.apk
-          if-no-files-found: error
