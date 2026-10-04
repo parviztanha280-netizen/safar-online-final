@@ -1,4 +1,4 @@
-name: Build 3 Safar Online APKs - REAL ROLES
+name: Build 3 Safar Online APKs - Firebase Fixed
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create three role apps
+      - name: Create role apps
         shell: bash
         run: |
           set -e
@@ -26,360 +26,569 @@ jobs:
           mkdir -p dist
 
           cat > build-source/passenger/www/index.html <<'HTML'
-          <!doctype html>
-          <html lang="fa" dir="rtl">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>سفر آنلاین - مسافر</title>
-            <style>
-              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-              .box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-              input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
-              input{border:1px solid #ddd}
-              button{background:#16834b;color:#fff;border:0;font-weight:bold}
-              .status{padding:14px;background:#eef7f1;border-radius:10px;margin-top:12px}
-            </style>
-          </head>
-          <body>
-            <div class="box">
-              <h1>👤 سفر آنلاین</h1>
-              <h3>پنل مسافر</h3>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سفر آنلاین - مسافر</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+.box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
+input{border:1px solid #ddd}
+button{background:#16834b;color:#fff;border:0;font-weight:bold}
+.status{padding:14px;background:#eef7f1;border-radius:10px;margin-top:12px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>👤 سفر آنلاین</h1>
+<h3>پنل مسافر</h3>
 
-              <input id="name" placeholder="نام مسافر">
-              <input id="phone" placeholder="شماره موبایل">
-              <input id="from" placeholder="مبدأ">
-              <input id="to" placeholder="مقصد">
-              <input id="fare" type="number" placeholder="کرایه پیشنهادی">
+<input id="name" placeholder="نام مسافر">
+<input id="phone" placeholder="شماره موبایل">
+<input id="from" placeholder="مبدأ">
+<input id="to" placeholder="مقصد">
+<input id="fare" type="number" placeholder="کرایه پیشنهادی">
 
-              <button id="request">🚕 درخواست سفر</button>
+<button id="request">🚕 درخواست سفر</button>
 
-              <div id="status" class="status">
-                هنوز سفری ثبت نشده است.
-              </div>
-            </div>
+<div id="status" class="status">
+در حال آماده‌سازی اتصال...
+</div>
+</div>
 
-            <script type="module">
-              import { initializeApp }
-                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+<script type="module">
+import {initializeApp}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 
-              import {
-                getFirestore,
-                collection,
-                addDoc,
-                serverTimestamp,
-                doc,
-                onSnapshot
-              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {
+getFirestore,
+collection,
+addDoc,
+serverTimestamp,
+doc,
+onSnapshot
+}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-              const firebaseConfig = {
-                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-                projectId: "safaronline",
-                storageBucket: "safaronline.firebasestorage.app",
-                messagingSenderId: "945083323788",
-                appId: "1:945083323788:web:safaronline"
-              };
+const firebaseConfig={
+apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+authDomain:"safaronline.firebaseapp.com",
+projectId:"safaronline",
+storageBucket:"safaronline.firebasestorage.app",
+messagingSenderId:"945083323788",
+appId:"1:945083323788:android:ee98efa3e671bd549cf2a9"
+};
 
-              const app = initializeApp(firebaseConfig);
-              const db = getFirestore(app);
+const statusEl=document.getElementById("status");
+const button=document.getElementById("request");
 
-              let rideId = null;
+let db;
+let ready=false;
 
-              document.getElementById("request").onclick = async () => {
-                const nameValue = document.getElementById("name").value.trim();
-                const phoneValue = document.getElementById("phone").value.trim();
-                const fromValue = document.getElementById("from").value.trim();
-                const toValue = document.getElementById("to").value.trim();
-                const fareValue = Number(document.getElementById("fare").value || 0);
+try{
+const app=initializeApp(firebaseConfig);
+db=getFirestore(app);
+ready=true;
 
-                if (!fromValue || !toValue) {
-                  alert("مبدأ و مقصد را وارد کنید.");
-                  return;
-                }
+statusEl.textContent=
+"✅ اتصال آماده است. اطلاعات سفر را وارد کنید.";
 
-                try {
-                  const ref = await addDoc(collection(db, "rides"), {
-                    name: nameValue,
-                    phone: phoneValue,
-                    from: fromValue,
-                    to: toValue,
-                    fare: fareValue,
-                    status: "requested",
-                    createdAt: serverTimestamp()
-                  });
+}catch(e){
 
-                  rideId = ref.id;
+statusEl.textContent=
+"❌ خطای اتصال Firebase:\n"+
+(e?.message||e);
 
-                  document.getElementById("status").textContent =
-                    "✅ درخواست ثبت شد؛ منتظر پذیرش راننده هستید.";
+}
 
-                  onSnapshot(doc(db, "rides", rideId), snap => {
-                    if (!snap.exists()) return;
+button.addEventListener("click",async()=>{
 
-                    const data = snap.data();
+if(!ready){
+statusEl.textContent="❌ Firebase آماده نیست.";
+return;
+}
 
-                    document.getElementById("status").textContent =
-                      "وضعیت سفر: " +
-                      (data.status || "نامشخص") +
-                      (data.driverName
-                        ? " | راننده: " + data.driverName
-                        : "");
-                  });
+const name=
+document.getElementById("name").value.trim();
 
-                } catch (error) {
-                  console.error(error);
-                  alert("خطا در ثبت درخواست سفر.");
-                }
-              };
-            </script>
-          </body>
-          </html>
-          HTML
+const phone=
+document.getElementById("phone").value.trim();
+
+const from=
+document.getElementById("from").value.trim();
+
+const to=
+document.getElementById("to").value.trim();
+
+const fare=
+Number(document.getElementById("fare").value||0);
+
+if(!from||!to){
+
+statusEl.textContent=
+"⚠️ مبدأ و مقصد را وارد کنید.";
+
+return;
+}
+
+button.disabled=true;
+
+statusEl.textContent=
+"⏳ در حال ثبت درخواست...";
+
+try{
+
+const ref=await addDoc(
+collection(db,"rides"),
+{
+name,
+phone,
+from,
+to,
+fare,
+status:"requested",
+createdAt:serverTimestamp()
+}
+);
+
+statusEl.textContent=
+"✅ درخواست ثبت شد.\n"+
+"شناسه سفر: "+ref.id+
+"\nمنتظر پذیرش راننده هستید.";
+
+onSnapshot(
+doc(db,"rides",ref.id),
+snap=>{
+
+if(!snap.exists())return;
+
+const r=snap.data();
+
+statusEl.textContent=
+"وضعیت سفر: "+
+(r.status||"نامشخص")+
+(r.driverName
+?"\nراننده: "+r.driverName:"")+
+(r.plate
+?"\nپلاک: "+r.plate:"");
+
+}
+);
+
+}catch(e){
+
+button.disabled=false;
+
+statusEl.textContent=
+"❌ ثبت سفر انجام نشد:\n"+
+(e?.message||e);
+
+}
+
+});
+</script>
+</body>
+</html>
+HTML
 
           cat > build-source/driver/www/index.html <<'HTML'
-          <!doctype html>
-          <html lang="fa" dir="rtl">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>سفر آنلاین - راننده</title>
-            <style>
-              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-              .box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-              input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
-              input{border:1px solid #ddd}
-              button{background:#1769aa;color:#fff;border:0;font-weight:bold}
-              .ride{background:#f1f5f9;padding:15px;border-radius:12px;margin:12px 0}
-              .small{color:#555}
-            </style>
-          </head>
-          <body>
-            <div class="box">
-              <h1>🚗 سفر آنلاین</h1>
-              <h3>پنل راننده</h3>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سفر آنلاین - راننده</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+.box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
+input{border:1px solid #ddd}
+button{background:#1769aa;color:#fff;border:0;font-weight:bold}
+.ride{background:#f1f5f9;padding:15px;border-radius:12px;margin:12px 0}
+.status{padding:14px;background:#eef4fa;border-radius:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
 
-              <input id="driver" placeholder="نام راننده">
-              <input id="plate" placeholder="شماره پلاک">
+<div class="box">
 
-              <button id="online">🟢 آنلاین شدن</button>
+<h1>🚗 سفر آنلاین</h1>
+<h3>پنل راننده</h3>
 
-              <div id="list">
-                برای دریافت درخواست‌ها آنلاین شوید.
-              </div>
-            </div>
+<input id="driver" placeholder="نام راننده">
+<input id="plate" placeholder="شماره پلاک">
 
-            <script type="module">
-              import { initializeApp }
-                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+<button id="online">
+🟢 آنلاین شدن
+</button>
 
-              import {
-                getFirestore,
-                collection,
-                query,
-                where,
-                onSnapshot,
-                doc,
-                updateDoc
-              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+<div id="status" class="status">
+آماده‌سازی...
+</div>
 
-              const firebaseConfig = {
-                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-                projectId: "safaronline",
-                storageBucket: "safaronline.firebasestorage.app",
-                messagingSenderId: "945083323788",
-                appId: "1:945083323788:web:safaronline"
-              };
+<div id="list"></div>
 
-              const app = initializeApp(firebaseConfig);
-              const db = getFirestore(app);
+</div>
 
-              document.getElementById("online").onclick = () => {
+<script type="module">
 
-                document.getElementById("online").disabled = true;
-                document.getElementById("online").textContent =
-                  "🟢 راننده آنلاین است";
+import {initializeApp}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 
-                const q = query(
-                  collection(db, "rides"),
-                  where("status", "==", "requested")
-                );
+import {
+getFirestore,
+collection,
+query,
+where,
+onSnapshot,
+doc,
+updateDoc
+}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-                onSnapshot(q, snapshot => {
+const firebaseConfig={
+apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+authDomain:"safaronline.firebaseapp.com",
+projectId:"safaronline",
+storageBucket:"safaronline.firebasestorage.app",
+messagingSenderId:"945083323788",
+appId:"1:945083323788:android:b2377a46b317584a9cf2a9"
+};
 
-                  const list = document.getElementById("list");
+const statusEl=
+document.getElementById("status");
 
-                  list.innerHTML = "";
+const button=
+document.getElementById("online");
 
-                  if (snapshot.empty) {
-                    list.innerHTML = "<p>درخواست جدیدی وجود ندارد.</p>";
-                    return;
-                  }
+let db;
+let ready=false;
 
-                  snapshot.forEach(item => {
+try{
 
-                    const data = item.data();
+db=getFirestore(
+initializeApp(firebaseConfig)
+);
 
-                    const box = document.createElement("div");
-                    box.className = "ride";
+ready=true;
 
-                    box.innerHTML =
-                      "<b>مبدأ:</b> " + (data.from || "-") +
-                      "<br><b>مقصد:</b> " + (data.to || "-") +
-                      "<br><b>کرایه:</b> " + (data.fare || 0) +
-                      "<br><span class='small'>مسافر: " +
-                      (data.name || "-") +
-                      "</span>";
+statusEl.textContent=
+"✅ اتصال آماده است. برای دریافت سفر آنلاین شوید.";
 
-                    const button = document.createElement("button");
-                    button.textContent = "✅ قبول سفر";
+}catch(e){
 
-                    button.onclick = async () => {
+statusEl.textContent=
+"❌ خطای اتصال Firebase:\n"+
+(e?.message||e);
 
-                      try {
+}
 
-                        await updateDoc(
-                          doc(db, "rides", item.id),
-                          {
-                            status: "accepted",
-                            driverName:
-                              document.getElementById("driver").value ||
-                              "راننده سفر آنلاین",
-                            plate:
-                              document.getElementById("plate").value || ""
-                          }
-                        );
+button.addEventListener("click",()=>{
 
-                        button.disabled = true;
-                        button.textContent = "سفر پذیرفته شد";
+if(!ready){
 
-                      } catch (error) {
-                        console.error(error);
-                        alert("خطا در پذیرش سفر.");
-                      }
-                    };
+statusEl.textContent=
+"❌ Firebase آماده نیست.";
 
-                    box.appendChild(button);
-                    list.appendChild(box);
-                  });
-                });
-              };
-            </script>
-          </body>
-          </html>
-          HTML
+return;
+}
+
+button.disabled=true;
+
+button.textContent=
+"🟢 راننده آنلاین است";
+
+statusEl.textContent=
+"در حال دریافت درخواست‌های جدید...";
+
+const q=query(
+collection(db,"rides"),
+where("status","==","requested")
+);
+
+onSnapshot(q,snapshot=>{
+
+const list=
+document.getElementById("list");
+
+list.innerHTML="";
+
+if(snapshot.empty){
+
+statusEl.textContent=
+"🟢 آنلاین هستید.\nدرخواست جدیدی وجود ندارد.";
+
+return;
+}
+
+statusEl.textContent=
+"🟢 آنلاین هستید.\nدرخواست‌های جدید:";
+
+snapshot.forEach(item=>{
+
+const r=item.data();
+
+const box=
+document.createElement("div");
+
+box.className="ride";
+
+box.innerHTML=
+"<b>مبدأ:</b> "+(r.from||"-")+
+"<br><b>مقصد:</b> "+(r.to||"-")+
+"<br><b>کرایه:</b> "+(r.fare||0)+
+"<br><b>مسافر:</b> "+(r.name||"-");
+
+const accept=
+document.createElement("button");
+
+accept.textContent=
+"✅ قبول سفر";
+
+accept.onclick=async()=>{
+
+accept.disabled=true;
+
+accept.textContent=
+"⏳ در حال قبول...";
+
+try{
+
+await updateDoc(
+doc(db,"rides",item.id),
+{
+status:"accepted",
+driverName:
+document.getElementById("driver").value||
+"راننده سفر آنلاین",
+
+plate:
+document.getElementById("plate").value||""
+}
+);
+
+accept.textContent=
+"✅ سفر پذیرفته شد";
+
+}catch(e){
+
+accept.disabled=false;
+
+accept.textContent=
+"قبول سفر";
+
+alert(
+"خطا: "+(e?.message||e)
+);
+
+}
+
+};
+
+box.appendChild(accept);
+
+list.appendChild(box);
+
+});
+
+},e=>{
+
+statusEl.textContent=
+"❌ خطا در دریافت سفرها:\n"+
+(e?.message||e);
+
+});
+
+});
+
+</script>
+
+</body>
+</html>
+HTML
 
           cat > build-source/admin/www/index.html <<'HTML'
-          <!doctype html>
-          <html lang="fa" dir="rtl">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>سفر آنلاین - مدیریت</title>
-            <style>
-              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
-              .box{max-width:700px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
-              button{width:100%;padding:14px;margin:7px 0;border-radius:10px;background:#222;color:#fff;border:0;font-size:16px;font-weight:bold}
-              .ride{background:#f1f1f1;padding:15px;border-radius:12px;margin:12px 0}
-            </style>
-          </head>
-          <body>
-            <div class="box">
-              <h1>👑 سفر آنلاین</h1>
-              <h3>مرکز مدیریت</h3>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سفر آنلاین - مدیریت</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+.box{max-width:700px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+button{width:100%;padding:14px;margin:7px 0;border-radius:10px;background:#222;color:#fff;border:0;font-size:16px;font-weight:bold}
+.ride{background:#f1f1f1;padding:15px;border-radius:12px;margin:12px 0}
+.status{padding:14px;background:#f5f5f5;border-radius:10px}
+</style>
+</head>
+<body>
 
-              <button id="refresh">
-                🔄 بروزرسانی سفرها
-              </button>
+<div class="box">
 
-              <div id="list">
-                در حال دریافت اطلاعات...
-              </div>
-            </div>
+<h1>👑 سفر آنلاین</h1>
+<h3>مرکز مدیریت</h3>
 
-            <script type="module">
-              import { initializeApp }
-                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+<button id="refresh">
+🔄 دریافت سفرها
+</button>
 
-              import {
-                getFirestore,
-                collection,
-                onSnapshot
-              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+<div id="status" class="status">
+در حال اتصال...
+</div>
 
-              const firebaseConfig = {
-                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
-                projectId: "safaronline",
-                storageBucket: "safaronline.firebasestorage.app",
-                messagingSenderId: "945083323788",
-                appId: "1:945083323788:web:safaronline"
-              };
+<div id="list"></div>
 
-              const app = initializeApp(firebaseConfig);
-              const db = getFirestore(app);
+</div>
 
-              function loadRides() {
+<script type="module">
 
-                onSnapshot(
-                  collection(db, "rides"),
-                  snapshot => {
+import {initializeApp}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 
-                    const list = document.getElementById("list");
+import {
+getFirestore,
+collection,
+onSnapshot
+}
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-                    list.innerHTML = "";
+const firebaseConfig={
+apiKey:"AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+authDomain:"safaronline.firebaseapp.com",
+projectId:"safaronline",
+storageBucket:"safaronline.firebasestorage.app",
+messagingSenderId:"945083323788",
+appId:"1:945083323788:android:1262253896af037e9cf2a9"
+};
 
-                    if (snapshot.empty) {
-                      list.innerHTML =
-                        "<p>هنوز سفری ثبت نشده است.</p>";
-                      return;
-                    }
+const statusEl=
+document.getElementById("status");
 
-                    snapshot.forEach(item => {
+let db;
 
-                      const data = item.data();
+try{
 
-                      const box = document.createElement("div");
-                      box.className = "ride";
+db=getFirestore(
+initializeApp(firebaseConfig)
+);
 
-                      box.innerHTML =
-                        "<b>مسافر:</b> " +
-                        (data.name || "-") +
-                        "<br><b>مبدأ:</b> " +
-                        (data.from || "-") +
-                        "<br><b>مقصد:</b> " +
-                        (data.to || "-") +
-                        "<br><b>کرایه:</b> " +
-                        (data.fare || 0) +
-                        "<br><b>وضعیت:</b> " +
-                        (data.status || "-") +
-                        "<br><b>راننده:</b> " +
-                        (data.driverName || "-");
+statusEl.textContent=
+"✅ اتصال مدیریت آماده است.";
 
-                      list.appendChild(box);
-                    });
-                  }
-                );
-              }
+}catch(e){
 
-              document.getElementById("refresh").onclick = loadRides;
+statusEl.textContent=
+"❌ خطای اتصال Firebase:\n"+
+(e?.message||e);
 
-              loadRides();
-            </script>
-          </body>
-          </html>
-          HTML
+}
+
+function load(){
+
+if(!db)return;
+
+statusEl.textContent=
+"⏳ در حال دریافت سفرها...";
+
+onSnapshot(
+collection(db,"rides"),
+snapshot=>{
+
+const list=
+document.getElementById("list");
+
+list.innerHTML="";
+
+if(snapshot.empty){
+
+statusEl.textContent=
+"هیچ سفری ثبت نشده است.";
+
+return;
+}
+
+statusEl.textContent=
+"✅ تعداد سفرها: "+
+snapshot.size;
+
+snapshot.forEach(item=>{
+
+const r=item.data();
+
+const box=
+document.createElement("div");
+
+box.className="ride";
+
+box.innerHTML=
+"<b>مسافر:</b> "+(r.name||"-")+
+"<br><b>مبدأ:</b> "+(r.from||"-")+
+"<br><b>مقصد:</b> "+(r.to||"-")+
+"<br><b>کرایه:</b> "+(r.fare||0)+
+"<br><b>وضعیت:</b> "+(r.status||"-")+
+"<br><b>راننده:</b> "+(r.driverName||"-")+
+"<br><b>پلاک:</b> "+(r.plate||"-");
+
+list.appendChild(box);
+
+});
+
+},
+e=>{
+
+statusEl.textContent=
+"❌ خطا در دریافت سفرها:\n"+
+(e?.message||e);
+
+});
+
+}
+
+document
+.getElementById("refresh")
+.addEventListener("click",load);
+
+load();
+
+</script>
+
+</body>
+</html>
+HTML
 
           for role in passenger driver admin
           do
+
             cat > build-source/$role/capacitor.config.json <<EOF
-          {
-            "appId": "com.safaronline.app.$role",
-            "appName": "Safar Online $role",
-            "webDir": "www",
-            "server": {
-              "androidScheme": "https"
-            }
-          }
-          EOF
+{
+  "appId": "com.safaronline.app.$role",
+  "appName": "Safar Online $role",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
+EOF
+
+            cd build-source/$role
+
+            npm init -y
+
+            npm install \
+              @capacitor/core \
+              @capacitor/cli \
+              @capacitor/android
+
+            npx cap add android
+
+            npx cap sync android
+
+            cd ../..
+
           done
 
       - name: Setup Node.js
@@ -393,54 +602,37 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Build Passenger APK
-        shell: bash
+      - name: Build Passenger
         run: |
-          set -e
-          cd build-source/passenger
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android
-          npx cap sync android
-          cd android
+          cd build-source/passenger/android
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-passenger.apk
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-passenger.apk
 
-      - name: Build Driver APK
-        shell: bash
+      - name: Build Driver
         run: |
-          set -e
-          cd build-source/driver
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android
-          npx cap sync android
-          cd android
+          cd build-source/driver/android
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-driver.apk
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-driver.apk
 
-      - name: Build Admin APK
-        shell: bash
+      - name: Build Admin
         run: |
-          set -e
-          cd build-source/admin
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android
-          npx cap sync android
-          cd android
+          cd build-source/admin/android
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-admin.apk
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            ../../../dist/safar-online-admin.apk
 
-      - name: Check APKs
+      - name: Verify APKs
         run: |
           ls -lh dist
-          test -f dist/safar-online-passenger.apk
-          test -f dist/safar-online-driver.apk
-          test -f dist/safar-online-admin.apk
 
-      - name: Upload three APKs
+          test -s dist/safar-online-passenger.apk
+          test -s dist/safar-online-driver.apk
+          test -s dist/safar-online-admin.apk
+
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: safar-online-REAL-3-ROLES
+          name: safar-online-FIREBASE-FIXED-3-APKS
           path: dist/*.apk
