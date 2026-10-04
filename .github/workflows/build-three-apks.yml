@@ -1,4 +1,4 @@
-name: Build 3 Safar Online APKs
+name: Build 3 Safar Online APKs - REAL ROLES
 
 on:
   workflow_dispatch:
@@ -11,411 +11,436 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-
-      # ==========================================
-      # 1. دریافت پروژه
-      # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      # ==========================================
-      # 2. آماده سازی سه برنامه
-      # ==========================================
-      - name: Prepare three applications
+      - name: Create three role apps
         shell: bash
         run: |
           set -e
 
-          echo "======================================"
-          echo "PREPARING SAFAR ONLINE"
-          echo "======================================"
-
-          rm -rf safar-source
-          rm -rf dist
-
-          mkdir -p safar-source/passenger
-          mkdir -p safar-source/driver
-          mkdir -p safar-source/admin
+          rm -rf build-source dist
+          mkdir -p build-source/passenger/www
+          mkdir -p build-source/driver/www
+          mkdir -p build-source/admin/www
           mkdir -p dist
 
-          # Passenger
-          rsync -a \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ safar-source/passenger/
+          cat > build-source/passenger/www/index.html <<'HTML'
+          <!doctype html>
+          <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>سفر آنلاین - مسافر</title>
+            <style>
+              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+              .box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+              input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
+              input{border:1px solid #ddd}
+              button{background:#16834b;color:#fff;border:0;font-weight:bold}
+              .status{padding:14px;background:#eef7f1;border-radius:10px;margin-top:12px}
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>👤 سفر آنلاین</h1>
+              <h3>پنل مسافر</h3>
 
-          # Driver
-          rsync -a \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ safar-source/driver/
+              <input id="name" placeholder="نام مسافر">
+              <input id="phone" placeholder="شماره موبایل">
+              <input id="from" placeholder="مبدأ">
+              <input id="to" placeholder="مقصد">
+              <input id="fare" type="number" placeholder="کرایه پیشنهادی">
 
-          # Admin
-          rsync -a \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ safar-source/admin/
+              <button id="request">🚕 درخواست سفر</button>
 
-          echo "Three applications prepared."
+              <div id="status" class="status">
+                هنوز سفری ثبت نشده است.
+              </div>
+            </div>
 
+            <script type="module">
+              import { initializeApp }
+                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 
-      # ==========================================
-      # 3. تنظیم Passenger
-      # ==========================================
-      - name: Configure Passenger
-        shell: bash
-        run: |
-          set -e
+              import {
+                getFirestore,
+                collection,
+                addDoc,
+                serverTimestamp,
+                doc,
+                onSnapshot
+              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-          cd safar-source/passenger
+              const firebaseConfig = {
+                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+                projectId: "safaronline",
+                storageBucket: "safaronline.firebasestorage.app",
+                messagingSenderId: "945083323788",
+                appId: "1:945083323788:web:safaronline"
+              };
 
-          rm -rf www
-          mkdir -p www
+              const app = initializeApp(firebaseConfig);
+              const db = getFirestore(app);
 
-          rsync -a \
-            --exclude="www" \
-            --exclude="android" \
-            --exclude="node_modules" \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ www/
+              let rideId = null;
 
-          node -e "
-          const fs=require('fs');
-          const file='capacitor.config.json';
-          let config={};
+              document.getElementById("request").onclick = async () => {
+                const nameValue = document.getElementById("name").value.trim();
+                const phoneValue = document.getElementById("phone").value.trim();
+                const fromValue = document.getElementById("from").value.trim();
+                const toValue = document.getElementById("to").value.trim();
+                const fareValue = Number(document.getElementById("fare").value || 0);
 
-          if(fs.existsSync(file)){
-            try{
-              config=JSON.parse(fs.readFileSync(file,'utf8'));
-            }catch(e){
-              config={};
+                if (!fromValue || !toValue) {
+                  alert("مبدأ و مقصد را وارد کنید.");
+                  return;
+                }
+
+                try {
+                  const ref = await addDoc(collection(db, "rides"), {
+                    name: nameValue,
+                    phone: phoneValue,
+                    from: fromValue,
+                    to: toValue,
+                    fare: fareValue,
+                    status: "requested",
+                    createdAt: serverTimestamp()
+                  });
+
+                  rideId = ref.id;
+
+                  document.getElementById("status").textContent =
+                    "✅ درخواست ثبت شد؛ منتظر پذیرش راننده هستید.";
+
+                  onSnapshot(doc(db, "rides", rideId), snap => {
+                    if (!snap.exists()) return;
+
+                    const data = snap.data();
+
+                    document.getElementById("status").textContent =
+                      "وضعیت سفر: " +
+                      (data.status || "نامشخص") +
+                      (data.driverName
+                        ? " | راننده: " + data.driverName
+                        : "");
+                  });
+
+                } catch (error) {
+                  console.error(error);
+                  alert("خطا در ثبت درخواست سفر.");
+                }
+              };
+            </script>
+          </body>
+          </html>
+          HTML
+
+          cat > build-source/driver/www/index.html <<'HTML'
+          <!doctype html>
+          <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>سفر آنلاین - راننده</title>
+            <style>
+              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+              .box{max-width:520px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+              input,button{width:100%;box-sizing:border-box;padding:14px;margin:7px 0;border-radius:10px;font-size:16px}
+              input{border:1px solid #ddd}
+              button{background:#1769aa;color:#fff;border:0;font-weight:bold}
+              .ride{background:#f1f5f9;padding:15px;border-radius:12px;margin:12px 0}
+              .small{color:#555}
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>🚗 سفر آنلاین</h1>
+              <h3>پنل راننده</h3>
+
+              <input id="driver" placeholder="نام راننده">
+              <input id="plate" placeholder="شماره پلاک">
+
+              <button id="online">🟢 آنلاین شدن</button>
+
+              <div id="list">
+                برای دریافت درخواست‌ها آنلاین شوید.
+              </div>
+            </div>
+
+            <script type="module">
+              import { initializeApp }
+                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+
+              import {
+                getFirestore,
+                collection,
+                query,
+                where,
+                onSnapshot,
+                doc,
+                updateDoc
+              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+              const firebaseConfig = {
+                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+                projectId: "safaronline",
+                storageBucket: "safaronline.firebasestorage.app",
+                messagingSenderId: "945083323788",
+                appId: "1:945083323788:web:safaronline"
+              };
+
+              const app = initializeApp(firebaseConfig);
+              const db = getFirestore(app);
+
+              document.getElementById("online").onclick = () => {
+
+                document.getElementById("online").disabled = true;
+                document.getElementById("online").textContent =
+                  "🟢 راننده آنلاین است";
+
+                const q = query(
+                  collection(db, "rides"),
+                  where("status", "==", "requested")
+                );
+
+                onSnapshot(q, snapshot => {
+
+                  const list = document.getElementById("list");
+
+                  list.innerHTML = "";
+
+                  if (snapshot.empty) {
+                    list.innerHTML = "<p>درخواست جدیدی وجود ندارد.</p>";
+                    return;
+                  }
+
+                  snapshot.forEach(item => {
+
+                    const data = item.data();
+
+                    const box = document.createElement("div");
+                    box.className = "ride";
+
+                    box.innerHTML =
+                      "<b>مبدأ:</b> " + (data.from || "-") +
+                      "<br><b>مقصد:</b> " + (data.to || "-") +
+                      "<br><b>کرایه:</b> " + (data.fare || 0) +
+                      "<br><span class='small'>مسافر: " +
+                      (data.name || "-") +
+                      "</span>";
+
+                    const button = document.createElement("button");
+                    button.textContent = "✅ قبول سفر";
+
+                    button.onclick = async () => {
+
+                      try {
+
+                        await updateDoc(
+                          doc(db, "rides", item.id),
+                          {
+                            status: "accepted",
+                            driverName:
+                              document.getElementById("driver").value ||
+                              "راننده سفر آنلاین",
+                            plate:
+                              document.getElementById("plate").value || ""
+                          }
+                        );
+
+                        button.disabled = true;
+                        button.textContent = "سفر پذیرفته شد";
+
+                      } catch (error) {
+                        console.error(error);
+                        alert("خطا در پذیرش سفر.");
+                      }
+                    };
+
+                    box.appendChild(button);
+                    list.appendChild(box);
+                  });
+                });
+              };
+            </script>
+          </body>
+          </html>
+          HTML
+
+          cat > build-source/admin/www/index.html <<'HTML'
+          <!doctype html>
+          <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>سفر آنلاین - مدیریت</title>
+            <style>
+              body{font-family:Arial;background:#f3f6f8;margin:0;padding:20px;color:#17202a}
+              .box{max-width:700px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 4px 20px #0001}
+              button{width:100%;padding:14px;margin:7px 0;border-radius:10px;background:#222;color:#fff;border:0;font-size:16px;font-weight:bold}
+              .ride{background:#f1f1f1;padding:15px;border-radius:12px;margin:12px 0}
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>👑 سفر آنلاین</h1>
+              <h3>مرکز مدیریت</h3>
+
+              <button id="refresh">
+                🔄 بروزرسانی سفرها
+              </button>
+
+              <div id="list">
+                در حال دریافت اطلاعات...
+              </div>
+            </div>
+
+            <script type="module">
+              import { initializeApp }
+                from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+
+              import {
+                getFirestore,
+                collection,
+                onSnapshot
+              } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+              const firebaseConfig = {
+                apiKey: "AIzaSyCBVjmIfqL0fHTu76PfrMHVgAVwB_uZb30",
+                projectId: "safaronline",
+                storageBucket: "safaronline.firebasestorage.app",
+                messagingSenderId: "945083323788",
+                appId: "1:945083323788:web:safaronline"
+              };
+
+              const app = initializeApp(firebaseConfig);
+              const db = getFirestore(app);
+
+              function loadRides() {
+
+                onSnapshot(
+                  collection(db, "rides"),
+                  snapshot => {
+
+                    const list = document.getElementById("list");
+
+                    list.innerHTML = "";
+
+                    if (snapshot.empty) {
+                      list.innerHTML =
+                        "<p>هنوز سفری ثبت نشده است.</p>";
+                      return;
+                    }
+
+                    snapshot.forEach(item => {
+
+                      const data = item.data();
+
+                      const box = document.createElement("div");
+                      box.className = "ride";
+
+                      box.innerHTML =
+                        "<b>مسافر:</b> " +
+                        (data.name || "-") +
+                        "<br><b>مبدأ:</b> " +
+                        (data.from || "-") +
+                        "<br><b>مقصد:</b> " +
+                        (data.to || "-") +
+                        "<br><b>کرایه:</b> " +
+                        (data.fare || 0) +
+                        "<br><b>وضعیت:</b> " +
+                        (data.status || "-") +
+                        "<br><b>راننده:</b> " +
+                        (data.driverName || "-");
+
+                      list.appendChild(box);
+                    });
+                  }
+                );
+              }
+
+              document.getElementById("refresh").onclick = loadRides;
+
+              loadRides();
+            </script>
+          </body>
+          </html>
+          HTML
+
+          for role in passenger driver admin
+          do
+            cat > build-source/$role/capacitor.config.json <<EOF
+          {
+            "appId": "com.safaronline.app.$role",
+            "appName": "Safar Online $role",
+            "webDir": "www",
+            "server": {
+              "androidScheme": "https"
             }
           }
+          EOF
+          done
 
-          config.appId='com.safaronline.app.passenger';
-          config.appName='Safar Online Passenger';
-          config.webDir='www';
-
-          fs.writeFileSync(
-            file,
-            JSON.stringify(config,null,2)
-          );
-          "
-
-          echo "Passenger configured."
-
-
-      # ==========================================
-      # 4. تنظیم Driver
-      # ==========================================
-      - name: Configure Driver
-        shell: bash
-        run: |
-          set -e
-
-          cd safar-source/driver
-
-          rm -rf www
-          mkdir -p www
-
-          rsync -a \
-            --exclude="www" \
-            --exclude="android" \
-            --exclude="node_modules" \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ www/
-
-          node -e "
-          const fs=require('fs');
-          const file='capacitor.config.json';
-          let config={};
-
-          if(fs.existsSync(file)){
-            try{
-              config=JSON.parse(fs.readFileSync(file,'utf8'));
-            }catch(e){
-              config={};
-            }
-          }
-
-          config.appId='com.safaronline.app.driver';
-          config.appName='Safar Online Driver';
-          config.webDir='www';
-
-          fs.writeFileSync(
-            file,
-            JSON.stringify(config,null,2)
-          );
-          "
-
-          echo "Driver configured."
-
-
-      # ==========================================
-      # 5. تنظیم Admin
-      # ==========================================
-      - name: Configure Admin
-        shell: bash
-        run: |
-          set -e
-
-          cd safar-source/admin
-
-          rm -rf www
-          mkdir -p www
-
-          rsync -a \
-            --exclude="www" \
-            --exclude="android" \
-            --exclude="node_modules" \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="safar-source" \
-            --exclude="dist" \
-            --exclude="passenger" \
-            --exclude="driver" \
-            --exclude="admin" \
-            ./ www/
-
-          node -e "
-          const fs=require('fs');
-          const file='capacitor.config.json';
-          let config={};
-
-          if(fs.existsSync(file)){
-            try{
-              config=JSON.parse(fs.readFileSync(file,'utf8'));
-            }catch(e){
-              config={};
-            }
-          }
-
-          config.appId='com.safaronline.app.admin';
-          config.appName='Safar Online Admin';
-          config.webDir='www';
-
-          fs.writeFileSync(
-            file,
-            JSON.stringify(config,null,2)
-          );
-          "
-
-          echo "Admin configured."
-
-
-      # ==========================================
-      # 6. بررسی فایل‌ها
-      # ==========================================
-      - name: Verify source
-        shell: bash
-        run: |
-          set -e
-
-          test -f safar-source/passenger/www/index.html
-          test -f safar-source/passenger/package.json
-          test -f safar-source/passenger/capacitor.config.json
-
-          test -f safar-source/driver/www/index.html
-          test -f safar-source/driver/package.json
-          test -f safar-source/driver/capacitor.config.json
-
-          test -f safar-source/admin/www/index.html
-          test -f safar-source/admin/package.json
-          test -f safar-source/admin/capacitor.config.json
-
-          echo "SOURCE CHECK PASSED."
-
-
-      # ==========================================
-      # 7. Node.js 22
-      # ==========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-
-      # ==========================================
-      # 8. Java 21
-      # ==========================================
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
 
-
-      # ==========================================
-      # 9. بررسی نسخه Java
-      # ==========================================
-      - name: Check Java
-        shell: bash
-        run: |
-          java -version
-          javac -version
-
-
-      # ==========================================
-      # 10. ساخت Passenger
-      # ==========================================
       - name: Build Passenger APK
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "BUILDING PASSENGER APK"
-          echo "======================================"
-
-          cd "$GITHUB_WORKSPACE/safar-source/passenger"
-
-          npm install
-
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
+          cd build-source/passenger
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
           npx cap sync android
-
           cd android
-
-          chmod +x gradlew
-
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-passenger.apk
 
-          cp \
-            app/build/outputs/apk/debug/app-debug.apk \
-            "$GITHUB_WORKSPACE/dist/safar-online-passenger.apk"
-
-          echo "PASSENGER APK CREATED."
-
-
-      # ==========================================
-      # 11. ساخت Driver
-      # ==========================================
       - name: Build Driver APK
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "BUILDING DRIVER APK"
-          echo "======================================"
-
-          cd "$GITHUB_WORKSPACE/safar-source/driver"
-
-          npm install
-
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
+          cd build-source/driver
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
           npx cap sync android
-
           cd android
-
-          chmod +x gradlew
-
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-driver.apk
 
-          cp \
-            app/build/outputs/apk/debug/app-debug.apk \
-            "$GITHUB_WORKSPACE/dist/safar-online-driver.apk"
-
-          echo "DRIVER APK CREATED."
-
-
-      # ==========================================
-      # 12. ساخت Admin
-      # ==========================================
       - name: Build Admin APK
         shell: bash
         run: |
           set -e
-
-          echo "======================================"
-          echo "BUILDING ADMIN APK"
-          echo "======================================"
-
-          cd "$GITHUB_WORKSPACE/safar-source/admin"
-
-          npm install
-
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
+          cd build-source/admin
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
           npx cap sync android
-
           cd android
-
-          chmod +x gradlew
-
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/safar-online-admin.apk
 
-          cp \
-            app/build/outputs/apk/debug/app-debug.apk \
-            "$GITHUB_WORKSPACE/dist/safar-online-admin.apk"
-
-          echo "ADMIN APK CREATED."
-
-
-      # ==========================================
-      # 13. بررسی APKها
-      # ==========================================
-      - name: Check APK files
-        shell: bash
+      - name: Check APKs
         run: |
-          set -e
-
-          echo "======================================"
-          echo "FINAL APK CHECK"
-          echo "======================================"
-
-          ls -lh dist/
-
+          ls -lh dist
           test -f dist/safar-online-passenger.apk
           test -f dist/safar-online-driver.apk
           test -f dist/safar-online-admin.apk
 
-          echo ""
-          echo "ALL 3 APKs CREATED SUCCESSFULLY."
-
-
-      # ==========================================
-      # 14. آپلود APKها
-      # ==========================================
-      - name: Upload 3 APKs
+      - name: Upload three APKs
         uses: actions/upload-artifact@v4
         with:
-          name: safar-online-three-apks
+          name: safar-online-REAL-3-ROLES
           path: dist/*.apk
-          if-no-files-found: error
