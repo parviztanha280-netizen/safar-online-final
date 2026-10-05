@@ -2,14 +2,6 @@
   "name": "safar-online-passenger",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "build": "echo static-app"
-  },
-  "dependencies": {
-    "@capacitor/core": "^7.4.3"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^7.4.3",
-    "@capacitor/android": "^7.4.3"
-  }
+  "scripts": {"build": "npx cap sync android && cd android && ./gradlew assembleDebug"},
+  "dependencies": {"@capacitor/core":"7.0.0","@capacitor/cli":"7.0.0","@capacitor/android":"7.0.0"}
 }

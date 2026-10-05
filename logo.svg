@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08784f"/><stop offset="1" stop-color="#19a36f"/></linearGradient></defs>
-<rect width="512" height="512" rx="110" fill="url(#g)"/>
-<path fill="#fff" d="M128 292c0-76 56-136 128-136s128 60 128 136v48c0 20-16 36-36 36h-22v-30H186v30h-22c-20 0-36-16-36-36zm48-42h160l-19-52c-5-15-19-25-35-25h-52c-16 0-30 10-35 25z"/>
-<circle cx="190" cy="316" r="24" fill="#08784f"/><circle cx="322" cy="316" r="24" fill="#08784f"/>
-<path d="M225 291h62" stroke="#08784f" stroke-width="10" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08784f"/><stop offset="1" stop-color="#19a36f"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#g)"/><path d="M111 365c47-9 82-39 105-91 15-35 31-68 57-88 27-21 59-27 101-22l27 5-13 62-22-4c-25-4-42 0-55 11-14 12-25 34-39 66-29 66-72 106-149 120l-12-59z" fill="#fff" opacity=".96"/><path d="M205 392c42-16 67-42 83-76l35-76" fill="none" stroke="#08784f" stroke-width="18" stroke-linecap="round"/><circle cx="153" cy="385" r="22" fill="#fff"/><circle cx="365" cy="164" r="22" fill="#fff"/><path d="M178 137h82" stroke="#fff" stroke-width="18" stroke-linecap="round" opacity=".9"/><text x="256" y="458" text-anchor="middle" font-family="Tahoma,Arial" font-size="42" font-weight="700" fill="#fff">سفر آنلاین</text></svg>
